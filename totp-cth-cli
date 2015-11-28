@@ -1,0 +1,83 @@
+#!/bin/bash
+errorFlag=0
+storeDir="${HOME}/.totp-cth-cli"
+
+function usage {
+	echo -e 'Usage: totp-cth-cli <command>'
+	echo -e 'Commands'
+	echo -e "	init		init the key storage for first time use"
+	echo -e "	show <name>	show the key requested"
+	echo -e "	add-key <name>	add a TOTP key"
+	echo -e "	del-key	<name>	remove a TOTP key"
+	echo -e "	list-key	list stored keys"
+	echo -e "	help		print this help message"
+	exit 0
+}
+
+function genToken {
+	key="$1"
+	let timeStamp=`date +%s`/30
+	hmacHash=`echo -n ${key} | openssl dgst -sha1 -hmac ${timeStamp} | sed -e 's/^.* //'`
+	hashOffset=$((0x`echo ${hmacHash} | cut -c 40`))
+	
+}
+
+function initDatabase {
+	if [[ -d ${storeDir} ]]; then
+		echo -e "Key Storage exists! Re-init and remove everything? [y/N]"
+		read answer
+		[[ $answer =~ (y|Y|yes) ]] && rm -rf "${storeDir}" || exit 0
+	fi
+	mkdir ${storeDir}
+	touch ${storeDir}/keys.db
+	echo "Done!"
+	exit 0
+}
+
+function showKey {
+	echo "looking for ${1}..."
+	token=`grep -E -e "${1}\$" ${storeDir}/keys.db | sed -e "s/:${1}//g"`
+	[[ "$token" == "" ]] && echo "Nothing found." || genToken ${token}
+}
+
+function addKey {
+	echo "Put your Key Here:"
+	read key;
+	name="$1"
+	echo "${key}:${name}" >> ~/.totp-cth-cli/keys.db
+
+}
+
+function delKey {
+	echo "Are you sure that you want to delete the key ${1}? [y/N]"
+	read answer
+	if [[ $answer =~ (y|Y|yes) ]]; then
+		sed -i "/:${1}/d" ${storeDir}/keys.db > ${storeDir}/keys.db
+	fi
+}
+
+#function listKey {
+#
+#}
+
+
+for var in "$@"; do
+	case "$var" in
+		"init")		initDatabase;;
+		"show")		MAJOR="show";;
+		"add-key")	MAJOR="add";;
+		"del-key")	MAJOR="del";;
+		"list-key")	listKey;;
+		"help")		usage;;
+		*)		PARAM="$var";;
+	esac
+	shift
+done
+
+case "$MAJOR" in
+	show)	showKey "${PARAM}";;
+	add)	addKey "${PARAM}";;
+	del)	delKey "${PARAM}";;
+esac
+
+exit $errorFlag
