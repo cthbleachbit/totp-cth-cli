@@ -1,32 +1,39 @@
 #!/bin/bash
 errorFlag=0
 storeDir="${HOME}/.totp-cth-cli"
+. 'base32decoder.lib.sh'
 
-function usage {
-	echo -e 'Usage: totp-cth-cli <command>'
-	echo -e 'Commands'
-	echo -e "	init		init the key storage for first time use"
-	echo -e "	show <name>	show the key requested"
-	echo -e "	add-key <name>	add a TOTP key"
-	echo -e "	del-key	<name>	remove a TOTP key"
-	echo -e "	list-key	list stored keys"
-	echo -e "	help		print this help message"
+usage() {
+	printf '%b\n' "Usage: totp-cth-cli <command>"
+	printf '%b\n' "Commands"
+	printf '%b\n' "	init		init the key storage for first time use"
+	printf '%b\n' "	show <name>	show the key requested"
+	printf '%b\n' "	add-key <name>	add a TOTP key"
+	printf '%b\n' "	del-key	<name>	remove a TOTP key"
+	printf '%b\n' "	list-key	list stored keys"
+	printf '%b\n' "	help		print this help message"
 	exit 0
 }
 
-function genToken {
+genToken() {
 	key="$1"
-	let timeStamp=`date +%s`/30
-	hmacHash=`echo -n ${key} | openssl dgst -sha1 -hmac ${timeStamp} | sed -e 's/^.* //'`
-	hashOffset=$((0x`echo ${hmacHash} | cut -c 40`))
-	
+	timeStamp=$((`date +%s`/30))
+	hmacHash=$(echo -n ${key} | openssl sha1 -hmac ${timeStamp} | sed -e 's/^.* //')
+	for (( i=0; i<=19; i=i+1 )); do
+		byteArray[${i}]=${hmacHash:${i}*2:2}
+	done
+	hmacOffset=$((16#${hmacHash:39}))
+	for (( i=${hmacOffset}; i<=${hmacOffset}+3; i++ )); do
+		tokenHex="${tokenHex}""${byteArray[${i}]}"
+	done
+	token=$((16#${tokenHex} & 16#7fffffff))
+	echo ${token}
 }
 
-function initDatabase {
+initDatabase() {
 	if [[ -d ${storeDir} ]]; then
-		echo -e "Key Storage exists! Re-init and remove everything? [y/N]"
-		read answer
-		[[ $answer =~ (y|Y|yes) ]] && rm -rf "${storeDir}" || exit 0
+		echo -e "Key Storage exists at ${storeDir}/keys.db"
+		exit 0
 	fi
 	mkdir ${storeDir}
 	touch ${storeDir}/keys.db
@@ -34,25 +41,27 @@ function initDatabase {
 	exit 0
 }
 
-function showKey {
+showKey() {
 	echo "looking for ${1}..."
-	token=`grep -E -e "${1}\$" ${storeDir}/keys.db | sed -e "s/:${1}//g"`
+	keyEntry=`grep "${1}:" ${storeDir}/keys.db`
+	token=${keyEntry:${#1}+1}
+	echo $token
 	[[ "$token" == "" ]] && echo "Nothing found." || genToken ${token}
 }
 
-function addKey {
-	echo "Put your Key Here:"
-	read key;
+addKey() {
+	read -p "Put your key here: " encodedKey
+	. 'base32decoder.sh'
+	key=${encodedKey}
 	name="$1"
-	echo "${key}:${name}" >> ~/.totp-cth-cli/keys.db
+	echo "${name}:${key}" >> ${storeDir}/keys.db
 
 }
 
-function delKey {
-	echo "Are you sure that you want to delete the key ${1}? [y/N]"
-	read answer
+delKey() {
+	read -p "Are you sure that you want to delete the key ${1}? [y/N] " answer
 	if [[ $answer =~ (y|Y|yes) ]]; then
-		sed -i "/:${1}/d" ${storeDir}/keys.db > ${storeDir}/keys.db
+		sed -i -e "/${1}:/d" "${storeDir}/keys.db"
 	fi
 }
 
