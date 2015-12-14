@@ -19,15 +19,22 @@ genToken() {
 	key="$1"
 	timeStamp=$((`date +%s`/30))
 	hmacHash=$(echo -n ${key} | openssl sha1 -hmac ${timeStamp} | sed -e 's/^.* //')
+	# Generate the hash
+	
 	for (( i=0; i<=19; i=i+1 )); do
 		byteArray[${i}]=${hmacHash:${i}*2:2}
 	done
 	hmacOffset=$((16#${hmacHash:39}))
+	# Got the offset
+	
 	for (( i=${hmacOffset}; i<=${hmacOffset}+3; i++ )); do
 		tokenHex="${tokenHex}""${byteArray[${i}]}"
 	done
 	token=$((16#${tokenHex} & 16#7fffffff))
-	echo ${token}
+	# Truncate the hash and mask the result
+	
+	echo ${token:${#token}-6}
+	# Print the last 6 numbers
 }
 
 initDatabase() {
@@ -45,17 +52,22 @@ showKey() {
 	echo "looking for ${1}..."
 	keyEntry=`grep "${1}:" ${storeDir}/keys.db`
 	token=${keyEntry:${#1}+1}
-	echo $token
-	[[ "$token" == "" ]] && echo "Nothing found." || genToken ${token}
+	# Get the encoded key from the file
+	if [[ "$token" == "" ]]; then
+		echo "Nothing found."
+		exit 0
+	else
+		token=`base32ToString ${token}`
+		# convert the key to  printable string
+		genToken ${token}
+	fi
 }
 
 addKey() {
 	read -p "Put your key here: " encodedKey
-	. 'base32decoder.sh'
-	key=${encodedKey}
 	name="$1"
-	echo "${name}:${key}" >> ${storeDir}/keys.db
-
+	echo "${name}:${encodedkey}" >> ${storeDir}/keys.db
+	# Store Base32 encoded keys in the file
 }
 
 delKey() {
