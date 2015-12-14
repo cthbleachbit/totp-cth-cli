@@ -1,10 +1,14 @@
 #!/bin/bash
 errorFlag=0
 storeDir="${HOME}/.totp-cth-cli"
-. 'base32decoder.lib.sh'
+color_RED='\033[0;31m'
+color_NOCOLOR='\033[0m'
+font_BOLD=$(tput bold)
+style_RESET=$(tput sgr0)
+. 'base32decoder.lib.sh' 
 
 usage() {
-	printf '%b\n' "Usage: totp-cth-cli <command>"
+	printf '%b\n' "${font_BOLD}Usage: totp-cth-cli <command> [--debug]${font_REGULAR}"
 	printf '%b\n' "Commands"
 	printf '%b\n' "	init		init the key storage for first time use"
 	printf '%b\n' "	show <name>	show the key requested"
@@ -12,13 +16,18 @@ usage() {
 	printf '%b\n' "	del-key	<name>	remove a TOTP key"
 	printf '%b\n' "	list-key	list stored keys"
 	printf '%b\n' "	help		print this help message"
+	printf '%b\n' "	--debug		Show Debug information"
 	exit 0
 }
 
 genToken() {
 	key="$1"
-	timeStamp=$((`date +%s`/30))
-	hmacHash=$(echo -n ${key} | openssl sha1 -hmac ${timeStamp} | sed -e 's/^.* //')
+	
+	timeStamp=$((`date +%s`/30 ))
+	hmacHash=$(openssl sha1 -hmac ${timeStamp} ${storeDir}/gen.tmp | sed -e 's/^.* //')
+	(( $debug )) && echo "hmacHash:${hmacHash}" >> ${storeDir}/.debug.log
+	(( $debug )) && echo "timeStamp:${timeStamp}" >> ${storeDir}/.debug.log
+	(( $debug )) && echo "key:${key}" >> ${storeDir}/.debug.log
 	# Generate the hash
 	
 	for (( i=0; i<=19; i=i+1 )); do
@@ -57,8 +66,9 @@ showKey() {
 		echo "Nothing found."
 		exit 0
 	else
-		token=`base32ToString ${token}`
-		# convert the key to  printable string
+		base32ToString ${token} > ${storeDir}/gen.tmp
+		(( $debug )) && echo `base32ToString ${token}` >> ${storeDir}/.debug.log
+		# convert the key to a printable string
 		genToken ${token}
 	fi
 }
@@ -71,7 +81,10 @@ addKey() {
 }
 
 delKey() {
-	read -p "Are you sure that you want to delete the key ${1}? [y/N] " answer
+	printf '%b\n' "${color_RED}${font_BOLD}WARNING!${style_RESET}"
+	printf '%b\n' "Removing this key ${font_BOLD}WON'T DISABLE${style_RESET} 2 Factor Auth for your account!"
+	printf '%b\n' "If you don't have backup access, deleting this key could lock yourself out!"
+	read -p "${font_BOLD}Are you sure that you want to delete the key ${1}? [y/N]${style_RESET} " answer
 	if [[ $answer =~ (y|Y|yes) ]]; then
 		sed -i -e "/${1}:/d" "${storeDir}/keys.db"
 	fi
@@ -90,6 +103,7 @@ for var in "$@"; do
 		"del-key")	MAJOR="del";;
 		"list-key")	listKey;;
 		"help")		usage;;
+		"--debug")	debug=1;;
 		*)		PARAM="$var";;
 	esac
 	shift
@@ -101,4 +115,5 @@ case "$MAJOR" in
 	del)	delKey "${PARAM}";;
 esac
 
+rm -rf ${storeDir}/gen.tmp
 exit $errorFlag
