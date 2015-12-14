@@ -1,6 +1,7 @@
 #!/bin/bash
 errorFlag=0
 storeDir="${HOME}/.totp-cth-cli"
+run_TEST=0
 color_RED='\033[0;31m'
 color_NOCOLOR='\033[0m'
 font_BOLD=$(tput bold)
@@ -8,26 +9,26 @@ style_RESET=$(tput sgr0)
 . 'base32decoder.lib.sh' 
 
 usage() {
-	printf '%b\n' "${font_BOLD}Usage: totp-cth-cli <command> [--debug]${font_REGULAR}"
-	printf '%b\n' "Commands"
+	printf '%b\n' "${font_BOLD}Usage: totp-cth-cli <command> [--debug]${style_RESET}"
+	printf '%b\n' "${font_BOLD}Commands${style_RESET}"
 	printf '%b\n' "	init		init the key storage for first time use"
 	printf '%b\n' "	show <name>	show the key requested"
 	printf '%b\n' "	add-key <name>	add a TOTP key"
 	printf '%b\n' "	del-key	<name>	remove a TOTP key"
 	printf '%b\n' "	list-key	list stored keys"
 	printf '%b\n' "	help		print this help message"
+	printf '%b\n' "	--test		interactive testing sector"
 	printf '%b\n' "	--debug		Show Debug information"
 	exit 0
 }
 
 genToken() {
-	key="$1"
+	(( $run_TEST )) && read -p "timeStamp in seconds/30:" timeStamp || timeStamp=$((`date +%s`/30 ))
+	# only ask for custom timestamp while testing
 	
-	timeStamp=$((`date +%s`/30 ))
-	hmacHash=$(openssl sha1 -hmac ${timeStamp} ${storeDir}/gen.tmp | sed -e 's/^.* //')
-	(( $debug )) && echo "hmacHash:${hmacHash}" >> ${storeDir}/.debug.log
-	(( $debug )) && echo "timeStamp:${timeStamp}" >> ${storeDir}/.debug.log
-	(( $debug )) && echo "key:${key}" >> ${storeDir}/.debug.log
+	hmacHash=$(openssl dgst -sha1 -mac HMAC -macopt key:${timeStamp} ${storeDir}/gen.tmp | sed -e 's/^.* //')
+	(( $debug )) && echo "hmacHash:${hmacHash}"
+	(( $debug )) && echo "timeStamp:${timeStamp}"
 	# Generate the hash
 	
 	for (( i=0; i<=19; i=i+1 )); do
@@ -66,10 +67,13 @@ showKey() {
 		echo "Nothing found."
 		exit 0
 	else
-		base32ToString ${token} > ${storeDir}/gen.tmp
-		(( $debug )) && echo `base32ToString ${token}` >> ${storeDir}/.debug.log
+		hexToken=`base32ToHex ${token}`
+		for (( i=0; i<${#hexToken}; i=i+2)); do
+			echo -n -e "\x${hexToken:${i}:2}" >> ${storeDir}/gen.tmp
+		done
+		(( $debug )) && echo "${token}"
 		# convert the key to a printable string
-		genToken ${token}
+		genToken
 	fi
 }
 
@@ -94,6 +98,14 @@ delKey() {
 #
 #}
 
+test() {
+	run_TEST=1
+	debug=1
+	echo "Using 12345678901234567890 as decoded key."
+	echo -n $((16#12345678901234567890)) > ${storeDir}/gen.tmp
+	# override the token when testing
+	genToken
+}
 
 for var in "$@"; do
 	case "$var" in
@@ -103,6 +115,7 @@ for var in "$@"; do
 		"del-key")	MAJOR="del";;
 		"list-key")	listKey;;
 		"help")		usage;;
+		"--test")	MAJOR="test";;
 		"--debug")	debug=1;;
 		*)		PARAM="$var";;
 	esac
@@ -113,6 +126,7 @@ case "$MAJOR" in
 	show)	showKey "${PARAM}";;
 	add)	addKey "${PARAM}";;
 	del)	delKey "${PARAM}";;
+	test)	test;;
 esac
 
 rm -rf ${storeDir}/gen.tmp
