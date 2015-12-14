@@ -1,8 +1,9 @@
 convertBy5Bit () {
+	# Convert by character
 	local input5Bit	
 	input5Bit=${1:0:1}
 	local outputBinary
-	case $1 in
+	case ${input5Bit} in
 		A|a|=)	outputBinary='00000';;
 		B|b)	outputBinary='00001';;
 		C|c)	outputBinary='00010';;
@@ -35,19 +36,18 @@ convertBy5Bit () {
 		5)	outputBinary='11101';;
 		6)	outputBinary='11110';;
 		7)	outputBinary='11111';;
+		# Conversion based on RFC 4648 base 32 alphabet
 	esac
 	echo -n ${outputBinary}
 }
 
 convertBy40Bit () {
+	# Convert by 8 base32 characters (to 5 bytes)
 	local input40Bit
 	input40Bit="$1"
-	for (( i=${#input40Bit}+1; i<=5; i++ )); do
-		input40Bit=${input40Bit}"="
-	done
 	
 	local output40BitBinary
-	for (( i=0; i<5; i++)); do
+	for (( i=0; i<8; i++)); do
 		output40BitBinary="${output40BitBinary}`convertBy5Bit ${input40Bit:${i}:1}`"
 	done
 	echo -n ${output40BitBinary}
@@ -56,8 +56,8 @@ convertBy40Bit () {
 decodeBase32 () {
 	local outputBinaryCode
 	input=$1
-	for (( i=0; i<${#input}; i=${i}+5)); do
-		outputBinaryCode="${outputBinaryCode}`convertBy40Bit ${input:${i}:5}`"
+	for (( i=0; i<${#input}; i=${i}+8)); do
+		outputBinaryCode="${outputBinaryCode}`convertBy40Bit ${input:${i}:8}`"
 	done
 	echo -n ${outputBinaryCode}
 }
@@ -66,10 +66,11 @@ base32ToHex () {
 	local binCode
 	binCode=`decodeBase32 $1`
 	local hexBuffer
-	for (( i=${#binCode}-4; i>=0; i=i-4)); do
-		hexBuffer=$((2#${binCode:$[i]:4}))"${hexBuffer}"
+	for (( i=0; i<${#binCode}; i=i+4)); do
+		hexBuffer=$((2#${binCode:$[i]:4}))
+		echo -n `echo "obase=16;${hexBuffer}" | bc`
 	done 
-	echo "obase=16;${hexBuffer}" | bc
+	
 }
 
 base32ToDec () {
