@@ -18,6 +18,7 @@ opt_TEST=0
 opt_DEBUG=0
 . '@libdir@/totp-cth-cli/base32decoder.lib.sh' 
 . '@libdir@/totp-cth-cli/io.lib.sh'
+. '@libdir@/totp-cth-cli/encryption.lib.sh'
 
 usage () {
 	prompt_BOLD "Usage: totp-cth-cli <command> [--debug]"

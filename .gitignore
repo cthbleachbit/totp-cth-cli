@@ -3,5 +3,4 @@
 *.swp
 
 totp-cth-cli
-lib/base32decoder.lib.sh
-lib/io.lib.sh
+lib/*.sh
