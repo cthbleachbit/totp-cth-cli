@@ -1,5 +1,4 @@
 #!/bin/bash
-errorFlag=0
 storeDir="${HOME}/.totp-cth-cli"
 run_TEST=0
 color_RED='\033[0;31m'
@@ -8,7 +7,7 @@ font_BOLD=$(tput bold)
 style_RESET=$(tput sgr0)
 . 'base32decoder.lib.sh' 
 
-usage() {
+usage () {
 	printf '%b\n' "${font_BOLD}Usage: totp-cth-cli <command> [--debug]${style_RESET}"
 	printf '%b\n' "${font_BOLD}Commands${style_RESET}"
 	printf '%b\n' "	init		init the key storage for first time use"
@@ -22,7 +21,7 @@ usage() {
 	exit 0
 }
 
-genToken() {
+genToken () {
 	key=$1
 	(( $run_TEST )) && read -p "timeStamp in seconds/30:" timeStamp || timeStamp=$((`date +%s`/30 ))
 	# only ask for custom timestamp while testing
@@ -35,6 +34,7 @@ genToken() {
 		echo -n -e "\x${timeStamp:${i}:2}" >> ${storeDir}/time.tmp
 	done
 	(( $debug )) && echo "counter:${timeStamp}"
+	# convert time to Hex value
 	
 	hmacHash=$(openssl dgst -sha1 -mac HMAC -macopt hexkey:"${key}" ${storeDir}/time.tmp | sed -e 's/^.* //')
 	(( $debug )) && echo "hmacHash:${hmacHash}"
@@ -56,9 +56,9 @@ genToken() {
 	# Print the last 6 numbers
 }
 
-initDatabase() {
+initDatabase () {
 	if [[ -d ${storeDir} ]]; then
-		echo -e "Key Storage exists at ${storeDir}/keys.db"
+		printf '%b\n' "Key Storage exists at ${storeDir}/keys.db"
 		exit 0
 	fi
 	mkdir ${storeDir}
@@ -67,30 +67,30 @@ initDatabase() {
 	exit 0
 }
 
-showKey() {
+showKey () {
 	echo "looking for ${1}..."
 	keyEntry=`grep "${1}:" ${storeDir}/keys.db`
 	token=${keyEntry:${#1}+1}
 	# Get the encoded key from the file
 	if [[ "$token" == "" ]]; then
-		echo "Nothing found."
+		printf '%b\n' "Nothing found."
 		exit 0
 	else
 		hexToken=`base32ToHex ${token}`
 		(( $debug )) && echo "${token}"
-		# convert the key to a printable string
+		# convert the key to hexadecimal value
 		genToken ${hexToken}
 	fi
 }
 
-addKey() {
-	read -p "Put your key here: " encodedKey
+addKey () {
+	read -p "${font_BOLD}Put your key here: ${style_RESET}" encodedKey
 	name="$1"
 	echo "${name}:${encodedkey}" >> ${storeDir}/keys.db
 	# Store Base32 encoded keys in the file
 }
 
-delKey() {
+delKey () {
 	printf '%b\n' "${color_RED}${font_BOLD}WARNING!${style_RESET}"
 	printf '%b\n' "Removing this key ${font_BOLD}WON'T DISABLE${style_RESET} 2 Factor Auth for your account!"
 	printf '%b\n' "If you don't have backup access, deleting this key could lock yourself out!"
@@ -103,19 +103,20 @@ delKey() {
 	fi
 }
 
-#function listKey {
-#
-#}
+listKey () {
+	keys=`cat ${storeDir}/keys.db`
+	printf '%b\n' "${font_BOLD}Available Keys:${style_RESET}"	
+	for keyEntry in ${keys}; do
+		echo ${keyEntry} | sed -e "s/:.*$//g"
+	done
+}
 
-doTest() {
+doTest () {
 	run_TEST=1
 	debug=1
 	echo "Using 12345678901234567890 as decoded key."
 	keyForTest="3132333435363738393031323334353637383930"
 	# Hex representation for 12345678901234567890
-	for (( i=0; i<${#keyForTest}; i=i+2)); do
-		echo -n -e "\x${keyForTest:${i}:2}" >> ${storeDir}/gen.tmp
-	done
 	# override the token when testing
 	genToken ${keyForTest}
 }
@@ -147,4 +148,4 @@ case "$MAJOR" in
 esac
 
 (( $debug )) || rm -rf ${storeDir}/*.tmp
-exit $errorFlag
+exit 0
