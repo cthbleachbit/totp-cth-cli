@@ -18,10 +18,10 @@ $(SCRIPTS): ${SCRIPTS:=.in}
 
 install: $(SCRIPTS)
 	$(INSTALL) -d $(DESTDIR)$(bindir)
-	$(INSTALL) -d $(DESTDIR)$(libdir)/totp-cli-cth
+	$(INSTALL) -d $(DESTDIR)$(libdir)/totp-cth-cli
 	$(INSTALL) -m755 totp-cth-cli $(DESTDIR)$(bindir)/totp-cth-cli
-	$(INSTALL) -m644 lib/base32decoder.lib.sh $(DESTDIR)$(libdir)/totp-cth-cli
-	$(INSTALL) -m644 lib/io.lib.sh $(DESTDIR)$(libdir)/totp-cth-cli
+	$(INSTALL) -m644 lib/base32decoder.lib.sh $(DESTDIR)$(libdir)/totp-cth-cli/
+	$(INSTALL) -m644 lib/io.lib.sh $(DESTDIR)$(libdir)/totp-cth-cli/
 
 clean: 
 	rm -f $(SCRIPTS)
