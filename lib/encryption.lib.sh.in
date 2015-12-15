@@ -17,6 +17,7 @@
 # keypair.
 
 encryptSetup () {
+	[ -f ${storeDir}/encrypted.flag ] && exit 0
 	local aesKey
 	aesHex=`openssl rand -hex 16`
 	ivHex=`openssl rand -hex 16`
@@ -26,6 +27,7 @@ encryptSetup () {
 	# key generation complete
 	
 	aesKeyContent="${aesHex}:${ivHex}"
+	prompt_BOLD "Encrypting AES key..."
 	openssl enc -aes-256-cbc -e -in ${storeDir}/keys.db -out ${storeDir}/keys.db.encrypt -K ${aesHex} -iv ${ivHex}
 	echo -n "${aesKeyContent}" | openssl rsautl -out ${storeDir}/aesKeyStore.encrypt -inkey ${storeDir}/databasePrivate.pem -encrypt
 	# AES Key stored in aesKeyStore.encrypt
@@ -38,10 +40,11 @@ encryptSetup () {
 }
 
 decryptSetup () {
+	[ -f ${storeDir}/encrypted.flag ] || exit 0
 	aesKeyContent=`getContentAES`
-	aesHex=`getHexKEY`
-	ivHex=`getHexIV`
-	execDecrypt > ${storeDir}/keys.db
+	aesHex=`getHexKEY ${aesKeyContent}`
+	ivHex=`getHexIV ${aesKeyContent}`
+	execDecrypt ${aesHex} ${ivHex} > ${storeDir}/keys.db
 	rm -f ${storeDir}/keys.db.encrypt
 	rm -f ${storeDir}/databasePrivate.pem
 	rm -f ${storeDir}/aesKeyStore.encrypt
@@ -54,21 +57,28 @@ getContentAES () {
 }
 
 getHexKEY () {
-	aesHex=`echo ${aesKeyContent} | sed -e 's/:.*$//g'`
+	# $1: aesKeyContent
+	aesHex=`echo ${1} | sed -e 's/:.*$//g'`
 	echo ${aesHex}
 }
 
 getHexIV () {
-	ivHex=`echo ${aesKeyContent} | sed -e 's/^.*://g'`
+	# $1: aesKeyContent
+	ivHex=`echo ${1} | sed -e 's/^.*://g'`
 	echo ${ivHex}
 }
 
 execDecrypt () {
-	openssl enc -aes-256-cbc -d -in ${storeDir}/keys.db.encrypt -K ${aesHex} -iv ${ivHex}
+	# $1: aesHex
+	# $2: ivHex
+	openssl enc -aes-256-cbc -d -in ${storeDir}/keys.db.encrypt -K ${1} -iv ${2}
 	# get decrypted key contents
 }
 
 execEncrypt () {
-	echo "${mem_KEYS}" | openssl enc -aes-256-cbc -e -out ${storeDir}/keys.db.encrypt -K ${aesHex} -iv ${ivHex}
+	# $1: keys.db in memory
+	# $2: aesHex
+	# $3: ivHex
+	echo "${1}" | openssl enc -aes-256-cbc -e -out ${storeDir}/keys.db.encrypt -K ${2} -iv ${3}
 	# write input if keys changed) to file
 }

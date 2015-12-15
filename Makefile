@@ -1,4 +1,4 @@
-SCRIPTS		= totp-cth-cli lib/base32decoder.lib.sh lib/io.lib.sh
+SCRIPTS		= totp-cth-cli lib/base32decoder.lib.sh lib/io.lib.sh lib/encryption.lib.sh
 SED		= /bin/sed
 SHELL		= /bin/bash
 PREFIX		= /usr/local
@@ -24,6 +24,7 @@ install: $(SCRIPTS)
 	$(INSTALL) -m755 totp-cth-cli $(DESTDIR)$(bindir)/totp-cth-cli
 	$(INSTALL) -m644 lib/base32decoder.lib.sh $(DESTDIR)$(libdir)/totp-cth-cli/
 	$(INSTALL) -m644 lib/io.lib.sh $(DESTDIR)$(libdir)/totp-cth-cli/
+	$(INSTALL) -m644 lib/encryption.lib.sh $(DESTDIR)$(libdir)/totp-cth-cli/
 	$(INSTALL) -m644 conf/bash-completion $(DESTDIR)$(syscompletiondir)/totp-cth-cli
 
 clean: 
