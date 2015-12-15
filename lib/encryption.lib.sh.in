@@ -1,0 +1,74 @@
+#==========================================================
+# totp-cth-cli
+# Database Encryption Library
+# Written by cth451 <cth451@gmail.com>
+# Licensed under LGPL 3
+#
+# This program is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Lesser General Public
+# License for more details.
+#==========================================================
+
+# On first time use, the script should invoke
+# encryptSetup(), which encrypts current database using
+# aes-256-cbc, which password was encrypted using RSA
+# keypair.
+
+encryptSetup () {
+	local aesKey
+	aesHex=`openssl rand -hex 16`
+	ivHex=`openssl rand -hex 16`
+	prompt_BOLD "Invoking openssl to generate rsa key pair."
+	prompt_BOLD "Set a strong password when asked."
+	openssl genrsa -des3 -out ${storeDir}/databasePrivate.pem 4096
+	# key generation complete
+	
+	aesKeyContent="${aesHex}:${ivHex}"
+	openssl enc -aes-256-cbc -e -in ${storeDir}/keys.db -out ${storeDir}/keys.db.encrypt -K ${aesHex} -iv ${ivHex}
+	echo -n "${aesKeyContent}" | openssl rsautl -out ${storeDir}/aesKeyStore.encrypt -inkey ${storeDir}/databasePrivate.pem -encrypt
+	# AES Key stored in aesKeyStore.encrypt
+	# database at keys.db.encrypt
+	# RSA private key at databasePrivate.pem
+	chmod 0600 ${storeDir}/aesKeyStore.encrypt
+	chmod 0600 ${storeDir}/databasePrivate.pem
+	echo > ${storeDir}/encrypted.flag
+	rm -f ${storeDir}/keys.db
+}
+
+decryptSetup () {
+	aesKeyContent=`getContentAES`
+	aesHex=`getHexKEY`
+	ivHex=`getHexIV`
+	execDecrypt > ${storeDir}/keys.db
+	rm -f ${storeDir}/keys.db.encrypt
+	rm -f ${storeDir}/databasePrivate.pem
+	rm -f ${storeDir}/aesKeyStore.encrypt
+	rm -f ${storeDir}/encrypted.flag
+}
+
+getContentAES () {
+	openssl rsautl -in ${storeDir}/aesKeyStore.encrypt -inkey ${storeDir}/databasePrivate.pem -decrypt
+	# print aes key and iv
+}
+
+getHexKEY () {
+	aesHex=`echo ${aesKeyContent} | sed -e 's/:.*$//g'`
+	echo ${aesHex}
+}
+
+getHexIV () {
+	ivHex=`echo ${aesKeyContent} | sed -e 's/^.*://g'`
+	echo ${ivHex}
+}
+
+execDecrypt () {
+	openssl enc -aes-256-cbc -d -in ${storeDir}/keys.db.encrypt -K ${aesHex} -iv ${ivHex}
+	# get decrypted key contents
+}
+
+execEncrypt () {
+	echo "${mem_KEYS}" | openssl enc -aes-256-cbc -e -out ${storeDir}/keys.db.encrypt -K ${aesHex} -iv ${ivHex}
+	# write input if keys changed) to file
+}
