@@ -1,0 +1,10 @@
+v0.3
+======
+* DONE		Base32 Decoding
+* DONE		TOTP Password generator
+
+v0.7
+======
+* PLAN		Database encryption
+* PLAN		Library structure
+* PLAN		IO modulize
