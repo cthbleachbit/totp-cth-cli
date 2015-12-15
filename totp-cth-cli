@@ -1,6 +1,22 @@
 #!/bin/bash
+#==========================================================
+# totp-cth-cli
+# Main Script
+# Written by cth451 <cth451@gmail.com>
+# Licensed under LGPL 3
+#
+# This program is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Lesser General Public
+# License for more details.
+#==========================================================
+
+# Variables
 storeDir="${HOME}/.totp-cth-cli"
-run_TEST=0
+opt_TEST=0
+opt_DEBUG=0
+# style variables
 color_RED='\033[0;31m'
 color_NOCOLOR='\033[0m'
 font_BOLD=$(tput bold)
@@ -16,14 +32,14 @@ usage () {
 	printf '%b\n' "	del-key	<name>	remove a TOTP key"
 	printf '%b\n' "	list-key	list stored keys"
 	printf '%b\n' "	help		print this help message"
-	printf '%b\n' "	--test		interactive testing sector"
+	printf '%b\n' "	test		interactive testing sector"
 	printf '%b\n' "	--debug		Show Debug information"
 	exit 0
 }
 
 genToken () {
 	key=$1
-	(( $run_TEST )) && read -p "timeStamp in seconds/30:" timeStamp || timeStamp=$((`date +%s`/30 ))
+	(( $opt_TEST )) && read -p "timeStamp in seconds/30:" timeStamp || timeStamp=$((`date +%s`/30 ))
 	# only ask for custom timestamp while testing
 	
 	timeStamp=`echo "obase=16;${timeStamp}"| bc`
@@ -33,11 +49,11 @@ genToken () {
 	for (( i=0; i<${#timeStamp}; i=i+2)); do
 		echo -n -e "\x${timeStamp:${i}:2}" >> ${storeDir}/time.tmp
 	done
-	(( $debug )) && echo "counter:${timeStamp}"
+	(( $opt_DEBUG )) && echo "counter:${timeStamp}"
 	# convert time to Hex value
 	
 	hmacHash=$(openssl dgst -sha1 -mac HMAC -macopt hexkey:"${key}" ${storeDir}/time.tmp | sed -e 's/^.* //')
-	(( $debug )) && echo "hmacHash:${hmacHash}"
+	(( $opt_DEBUG )) && echo "hmacHash:${hmacHash}"
 	# Generate the hash
 	
 	for (( i=0; i<=19; i=i+1 )); do
@@ -77,7 +93,7 @@ showKey () {
 		exit 0
 	else
 		hexToken=`base32ToHex ${token}`
-		(( $debug )) && echo "${token}"
+		(( $opt_DEBUG )) && echo "${token}"
 		# convert the key to hexadecimal value
 		genToken ${hexToken}
 	fi
@@ -112,8 +128,8 @@ listKey () {
 }
 
 doTest () {
-	run_TEST=1
-	debug=1
+	opt_TEST=1
+	opt_DEBUG=1
 	echo "Using 12345678901234567890 as decoded key."
 	keyForTest="3132333435363738393031323334353637383930"
 	# Hex representation for 12345678901234567890
@@ -127,25 +143,29 @@ rm -rf ${storeDir}/*.tmp
 
 for var in "$@"; do
 	case "$var" in
-		"init")		initDatabase;;
+		"init")		MAJOR="init";;
 		"show")		MAJOR="show";;
 		"add-key")	MAJOR="add";;
 		"del-key")	MAJOR="del";;
-		"list-key")	listKey;;
-		"help")		usage;;
-		"--test")	MAJOR="test";;
-		"--debug")	debug=1;;
+		"list-key")	MAJOR="list";;
+		"help")		MAJOR="help";;
+		"test")		MAJOR="test";;
+		"--debug")	opt_DEBUG=1;;
 		*)		PARAM="$var";;
 	esac
 	shift
 done
 
 case "$MAJOR" in
+	init)		initDatabase;;
 	show)		showKey "${PARAM}";;
 	add)		addKey "${PARAM}";;
 	del)		delKey "${PARAM}";;
+	list)		listKey;;
+	help)		usage;;
 	test)		doTest;;
+	*)		usage;;
 esac
 
-(( $debug )) || rm -rf ${storeDir}/*.tmp
+(( $opt_DEBUG )) || rm -rf ${storeDir}/*.tmp
 exit 0

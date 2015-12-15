@@ -1,5 +1,18 @@
+#==========================================================
+# totp-cth-cli
+# Base32 Decoding Library
+# Written by cth451 <cth451@gmail.com>
+# Licensed under LGPL 3
+#
+# This program is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Lesser General Public
+# License for more details.
+#==========================================================
+
+# base32 encoded character -> 5 bits
 convertBy5Bit () {
-	# Convert by character
 	local input5Bit	
 	input5Bit=${1:0:1}
 	local outputBinary
@@ -41,8 +54,8 @@ convertBy5Bit () {
 	echo -n ${outputBinary}
 }
 
+# 8 base32 encoded characters -> 5 bytes
 convertBy40Bit () {
-	# Convert by 8 base32 characters (to 5 bytes)
 	local input40Bit
 	input40Bit="$1"
 	
@@ -53,6 +66,7 @@ convertBy40Bit () {
 	echo -n ${output40BitBinary}
 } 
 
+# base32 encoded string -> binary code
 decodeBase32 () {
 	local outputBinaryCode
 	input=$1
@@ -62,6 +76,7 @@ decodeBase32 () {
 	echo -n ${outputBinaryCode}
 }
 
+# base32 encoded string -> hexadecimal string
 base32ToHex () {
 	local binCode
 	binCode=`decodeBase32 $1`
@@ -73,11 +88,7 @@ base32ToHex () {
 	
 }
 
-base32ToDec () {
-	binCode=`decodeBase32 $1`
-	echo -n $((2#${binCode}))
-}
-
+# base32 encoded string -> ASCII string (maybe with illegal characters)
 base32ToString () {
 	local hexCode
 	hexCode=`base32ToHex $1`
