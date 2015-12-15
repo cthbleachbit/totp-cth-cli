@@ -23,12 +23,21 @@ usage() {
 }
 
 genToken() {
+	key=$1
 	(( $run_TEST )) && read -p "timeStamp in seconds/30:" timeStamp || timeStamp=$((`date +%s`/30 ))
 	# only ask for custom timestamp while testing
 	
-	hmacHash=$(openssl dgst -sha1 -mac HMAC -macopt key:${timeStamp} ${storeDir}/gen.tmp | sed -e 's/^.* //')
+	timeStamp=`echo "obase=16;${timeStamp}"| bc`
+	for (( i=${#timeStamp}; i<16; i++)); do
+		timeStamp="0"${timeStamp}
+	done
+	for (( i=0; i<${#timeStamp}; i=i+2)); do
+		echo -n -e "\x${timeStamp:${i}:2}" >> ${storeDir}/time.tmp
+	done
+	(( $debug )) && echo "counter:${timeStamp}"
+	
+	hmacHash=$(openssl dgst -sha1 -mac HMAC -macopt hexkey:"${key}" ${storeDir}/time.tmp | sed -e 's/^.* //')
 	(( $debug )) && echo "hmacHash:${hmacHash}"
-	(( $debug )) && echo "timeStamp:${timeStamp}"
 	# Generate the hash
 	
 	for (( i=0; i<=19; i=i+1 )); do
@@ -43,7 +52,7 @@ genToken() {
 	token=$((16#${tokenHex} & 16#7fffffff))
 	# Truncate the hash and mask the result
 	
-	echo ${token:${#token}-6}
+	echo "${font_BOLD}${token:${#token}-6}${style_RESET}"
 	# Print the last 6 numbers
 }
 
@@ -68,12 +77,9 @@ showKey() {
 		exit 0
 	else
 		hexToken=`base32ToHex ${token}`
-		for (( i=0; i<${#hexToken}; i=i+2)); do
-			echo -n -e "\x${hexToken:${i}:2}" >> ${storeDir}/gen.tmp
-		done
 		(( $debug )) && echo "${token}"
 		# convert the key to a printable string
-		genToken
+		genToken ${hexToken}
 	fi
 }
 
@@ -91,6 +97,9 @@ delKey() {
 	read -p "${font_BOLD}Are you sure that you want to delete the key ${1}? [y/N]${style_RESET} " answer
 	if [[ $answer =~ (y|Y|yes) ]]; then
 		sed -i -e "/${1}:/d" "${storeDir}/keys.db"
+		printf '%b\n' "${font_BOLD}${1}${style_RESET} deleted."
+	else
+		printf '%b\n' "Key not changed."
 	fi
 }
 
@@ -98,14 +107,22 @@ delKey() {
 #
 #}
 
-test() {
+doTest() {
 	run_TEST=1
 	debug=1
 	echo "Using 12345678901234567890 as decoded key."
-	echo -n $((16#12345678901234567890)) > ${storeDir}/gen.tmp
+	keyForTest="3132333435363738393031323334353637383930"
+	# Hex representation for 12345678901234567890
+	for (( i=0; i<${#keyForTest}; i=i+2)); do
+		echo -n -e "\x${keyForTest:${i}:2}" >> ${storeDir}/gen.tmp
+	done
 	# override the token when testing
-	genToken
+	genToken ${keyForTest}
 }
+
+# main function
+
+rm -rf ${storeDir}/*.tmp
 
 for var in "$@"; do
 	case "$var" in
@@ -123,11 +140,11 @@ for var in "$@"; do
 done
 
 case "$MAJOR" in
-	show)	showKey "${PARAM}";;
-	add)	addKey "${PARAM}";;
-	del)	delKey "${PARAM}";;
-	test)	test;;
+	show)		showKey "${PARAM}";;
+	add)		addKey "${PARAM}";;
+	del)		delKey "${PARAM}";;
+	test)		doTest;;
 esac
 
-rm -rf ${storeDir}/gen.tmp
+(( $debug )) || rm -rf ${storeDir}/*.tmp
 exit $errorFlag
