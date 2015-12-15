@@ -59,6 +59,11 @@ convertBy40Bit () {
 	local input40Bit
 	input40Bit="$1"
 	
+	for (( i=${#input40Bit}; i<=8; i++)); do
+		input40Bit=${input40Bit}"="
+	done
+	# pad with =
+	
 	local output40BitBinary
 	for (( i=0; i<8; i++)); do
 		output40BitBinary="${output40BitBinary}`convertBy5Bit ${input40Bit:${i}:1}`"
