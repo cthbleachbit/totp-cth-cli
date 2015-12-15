@@ -1,0 +1,23 @@
+#==========================================================
+# totp-cth-cli
+# Main Script
+# Written by cth451 <cth451@gmail.com>
+# Public Domain
+#
+# /etc/bash_completion.d/totp-cth-cli
+#==========================================================
+
+_totp-cth-cli () {
+	local cur prev opts
+	COMPREPLY=()
+	cur="${COMP_WORDS[COMP_CWORD]}"
+	prev="${COMP_WORDS[COMP_CWORD-1]}"
+	commands="init show add-key del-key list-key help test"
+
+    if [[ ${cur} == * ]] ; then
+        COMPREPLY=( $(compgen -W "${commands}" ${cur}) )
+        return 0
+    fi
+}
+
+complete -o default -F _totp-cth-cli totp-cth-cli
