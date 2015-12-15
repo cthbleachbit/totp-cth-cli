@@ -12,7 +12,7 @@ _totp-cth-cli () {
 	COMPREPLY=()
 	cur="${COMP_WORDS[COMP_CWORD]}"
 	prev="${COMP_WORDS[COMP_CWORD-1]}"
-	commands="init show add-key del-key list-key help test"
+	commands="init show add-key del-key list-key help test enable-enc disable-enc"
 
     if [[ ${cur} == * ]] ; then
         COMPREPLY=( $(compgen -W "${commands}" ${cur}) )

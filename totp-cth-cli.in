@@ -22,7 +22,7 @@ opt_DEBUG=0
 
 usage () {
 	prompt_BOLD "Usage: totp-cth-cli <command> [--debug]"
-	prompt_BOLD "Commands"
+	prompt_BOLD "Commands:"
 	prompt_REGU "	init		init the key storage for first time use"
 	prompt_REGU "	show <name>	show the key requested"
 	prompt_REGU "	add-key <name>	add a TOTP key"
@@ -31,6 +31,10 @@ usage () {
 	prompt_REGU "	help		print this help message"
 	prompt_REGU "	test		interactive testing sector"
 	prompt_REGU "	--debug		Show Debug information"
+	prompt_BOLD "Advanced:"
+	prompt_REGU "	enable-enc	setup database encryption"
+	prompt_REGU "	disable-enc	disable database encryption"
+	prompt_REGU "			(disable and re-enable to change password)"
 	exit 0
 }
 
@@ -85,7 +89,8 @@ initDatabase () {
 
 showKey () {
 	echo "looking for ${1}..."
-	keyEntry=`grep "${1}:" ${storeDir}/keys.db`
+	keyInMem=`readKeys`
+	keyEntry=`echo "${keyInMem}" | grep "${1}:"`
 	token=${keyEntry:${#1}+1}
 	# Get the encoded key from the file
 	if [[ "$token" == "" ]]; then
@@ -102,9 +107,11 @@ showKey () {
 }
 
 addKey () {
+	keyInMem=`readKeys`
 	read -p "${font_BOLD}Put your base32 encoded key here: ${style_RESET}" encodedKey
 	name="$1"
-	echo "${name}:${encodedKey}" >> ${storeDir}/keys.db
+	keyInMem=${keyInMem}`printf '\n%b\n' "${name}:${encodedKey}"`
+	writeKeys "${keyInMem}"
 	prompt_REGU "Key added!"
 	# Store Base32 encoded keys in the file
 	
@@ -113,7 +120,8 @@ addKey () {
 
 delKey () {
 	echo "looking for ${1}..."
-	keyEntry=`grep "${1}:" ${storeDir}/keys.db`
+	keyInMem=`readKeys`
+	keyEntry=`echo "${keyInMem}" | grep "${1}:"`
 	token=${keyEntry:${#1}+1}
 	if [[ "$token" == "" ]]; then
 		prompt_BOLD "Key ${1} not found."
@@ -124,7 +132,8 @@ delKey () {
 		prompt_REGU "If you don't have backup access, deleting this key could lock yourself out!"
 		read -p "${font_BOLD}Are you sure that you want to delete the key ${1}? [y/N]${style_RESET} " answer
 		if [[ $answer =~ (y|Y|yes) ]]; then
-			sed -i -e "/${1}:/d" "${storeDir}/keys.db"
+			keyInMem=`echo "${keyInMem}" | sed -e "/${1}:/d"`
+			writeKeys "${keyInMem}"
 			prompt_BOLD "Key ${1} deleted."
 		else
 			prompt_REGU "Key not changed."
@@ -135,9 +144,9 @@ delKey () {
 }
 
 listKey () {
-	keys=`cat ${storeDir}/keys.db`
+	keyInMem=`readKeys`
 	prompt_BOLD "Available Keys:"	
-	for keyEntry in ${keys}; do
+	for keyEntry in ${keyInMem}; do
 		echo ${keyEntry} | sed -e "s/:.*$//g"
 	done
 	
@@ -167,6 +176,8 @@ for var in "$@"; do
 		"list-key")	MAJOR="list";;
 		"help")		MAJOR="help";;
 		"test")		MAJOR="test";;
+		"enable-enc")	MAJOR="encrypt";;
+		"disable-enc")	MAJOR="decrypt";;
 		"--debug")	opt_DEBUG=1;;
 		*)		PARAM="$var";;
 	esac
@@ -181,6 +192,8 @@ case "$MAJOR" in
 	list)		listKey;;
 	help)		usage;;
 	test)		doTest;;
+	encrypt)	encryptSetup;;
+	decrypt)	decryptSetup;;
 	*)		usage;;
 esac
 

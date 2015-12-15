@@ -24,15 +24,17 @@ encryptSetup () {
 	prompt_BOLD "Invoking openssl to generate rsa key pair."
 	prompt_BOLD "Set a strong password when asked."
 	openssl genrsa -des3 -out ${storeDir}/databasePrivate.pem 4096
+	openssl rsa -in ${storeDir}/databasePrivate.pem -pubout -out ${storeDir}/databasePublic.pem
 	# key generation complete
 	
 	aesKeyContent="${aesHex}:${ivHex}"
 	prompt_BOLD "Encrypting AES key..."
 	openssl enc -aes-256-cbc -e -in ${storeDir}/keys.db -out ${storeDir}/keys.db.encrypt -K ${aesHex} -iv ${ivHex}
-	echo -n "${aesKeyContent}" | openssl rsautl -out ${storeDir}/aesKeyStore.encrypt -inkey ${storeDir}/databasePrivate.pem -encrypt
+	echo -n "${aesKeyContent}" | openssl rsautl -out ${storeDir}/aesKeyStore.encrypt -pubin -inkey ${storeDir}/databasePublic.pem -encrypt
 	# AES Key stored in aesKeyStore.encrypt
 	# database at keys.db.encrypt
 	# RSA private key at databasePrivate.pem
+	# RSA public key at batabasePublic.pem
 	chmod 0600 ${storeDir}/aesKeyStore.encrypt
 	chmod 0600 ${storeDir}/databasePrivate.pem
 	echo > ${storeDir}/encrypted.flag
@@ -47,6 +49,7 @@ decryptSetup () {
 	execDecrypt ${aesHex} ${ivHex} > ${storeDir}/keys.db
 	rm -f ${storeDir}/keys.db.encrypt
 	rm -f ${storeDir}/databasePrivate.pem
+	rm -f ${storeDir}/databasePublic.pem
 	rm -f ${storeDir}/aesKeyStore.encrypt
 	rm -f ${storeDir}/encrypted.flag
 }
