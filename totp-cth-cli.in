@@ -16,24 +16,20 @@
 storeDir="${HOME}/.totp-cth-cli"
 opt_TEST=0
 opt_DEBUG=0
-# style variables
-color_RED='\033[0;31m'
-color_NOCOLOR='\033[0m'
-font_BOLD=$(tput bold)
-style_RESET=$(tput sgr0)
-. 'base32decoder.lib.sh' 
+. '@libdir@/totp-cth-cli/base32decoder.lib.sh' 
+. '@libdir@/totp-cth-cli/io.lib.sh'
 
 usage () {
-	printf '%b\n' "${font_BOLD}Usage: totp-cth-cli <command> [--debug]${style_RESET}"
-	printf '%b\n' "${font_BOLD}Commands${style_RESET}"
-	printf '%b\n' "	init		init the key storage for first time use"
-	printf '%b\n' "	show <name>	show the key requested"
-	printf '%b\n' "	add-key <name>	add a TOTP key"
-	printf '%b\n' "	del-key	<name>	remove a TOTP key"
-	printf '%b\n' "	list-key	list stored keys"
-	printf '%b\n' "	help		print this help message"
-	printf '%b\n' "	test		interactive testing sector"
-	printf '%b\n' "	--debug		Show Debug information"
+	prompt_BOLD "Usage: totp-cth-cli <command> [--debug]"
+	prompt_BOLD "Commands"
+	prompt_REGU "	init		init the key storage for first time use"
+	prompt_REGU "	show <name>	show the key requested"
+	prompt_REGU "	add-key <name>	add a TOTP key"
+	prompt_REGU "	del-key	<name>	remove a TOTP key"
+	prompt_REGU "	list-key	list stored keys"
+	prompt_REGU "	help		print this help message"
+	prompt_REGU "	test		interactive testing sector"
+	prompt_REGU "	--debug		Show Debug information"
 	exit 0
 }
 
@@ -68,13 +64,13 @@ genToken () {
 	token=$((16#${tokenHex} & 16#7fffffff))
 	# Truncate the hash and mask the result
 	
-	echo "${font_BOLD}${token:${#token}-6}${style_RESET}"
+	prompt_BOLD "${token:${#token}-6}"
 	# Print the last 6 numbers
 }
 
 initDatabase () {
 	if [[ -d ${storeDir} ]]; then
-		printf '%b\n' "Key Storage exists at ${storeDir}/keys.db"
+		prompt_BOLD "Key Storage exists at ${storeDir}/keys.db"
 		exit 0
 	fi
 	mkdir ${storeDir}
@@ -89,7 +85,7 @@ showKey () {
 	token=${keyEntry:${#1}+1}
 	# Get the encoded key from the file
 	if [[ "$token" == "" ]]; then
-		printf '%b\n' "Nothing found."
+		prompt_BOLD "Nothing found."
 		exit 0
 	else
 		hexToken=`base32ToHex ${token}`
@@ -107,9 +103,9 @@ addKey () {
 }
 
 delKey () {
-	printf '%b\n' "${color_RED}${font_BOLD}WARNING!${style_RESET}"
-	printf '%b\n' "Removing this key ${font_BOLD}WON'T DISABLE${style_RESET} 2 Factor Auth for your account!"
-	printf '%b\n' "If you don't have backup access, deleting this key could lock yourself out!"
+	prompt_WARN "WARNING!"
+	prompt_REGU "Removing this key ${font_BOLD}WON'T DISABLE${style_RESET} 2 Factor Auth for your account!"
+	prompt_REGU "If you don't have backup access, deleting this key could lock yourself out!"
 	read -p "${font_BOLD}Are you sure that you want to delete the key ${1}? [y/N]${style_RESET} " answer
 	if [[ $answer =~ (y|Y|yes) ]]; then
 		sed -i -e "/${1}:/d" "${storeDir}/keys.db"
@@ -121,7 +117,7 @@ delKey () {
 
 listKey () {
 	keys=`cat ${storeDir}/keys.db`
-	printf '%b\n' "${font_BOLD}Available Keys:${style_RESET}"	
+	prompt_BOLD "Available Keys:"	
 	for keyEntry in ${keys}; do
 		echo ${keyEntry} | sed -e "s/:.*$//g"
 	done
@@ -130,7 +126,7 @@ listKey () {
 doTest () {
 	opt_TEST=1
 	opt_DEBUG=1
-	echo "Using 12345678901234567890 as decoded key."
+	prompt_REGU "Using 12345678901234567890 as decoded key."
 	keyForTest="3132333435363738393031323334353637383930"
 	# Hex representation for 12345678901234567890
 	# override the token when testing
@@ -138,7 +134,7 @@ doTest () {
 }
 
 # main function
-
+unset MAJOR
 rm -rf ${storeDir}/*.tmp
 
 for var in "$@"; do
