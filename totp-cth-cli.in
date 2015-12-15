@@ -48,6 +48,7 @@ genToken () {
 	(( $opt_DEBUG )) && echo "counter:${timeStamp}"
 	# convert time to Hex value
 	
+	local hmacHash
 	hmacHash=$(openssl dgst -sha1 -mac HMAC -macopt hexkey:"${key}" ${storeDir}/time.tmp | sed -e 's/^.* //')
 	(( $opt_DEBUG )) && echo "hmacHash:${hmacHash}"
 	# Generate the hash
@@ -59,13 +60,15 @@ genToken () {
 	# Got the offset
 	
 	for (( i=${hmacOffset}; i<=${hmacOffset}+3; i++ )); do
-		tokenHex="${tokenHex}""${byteArray[${i}]}"
+		totpHex="${totpHex}""${byteArray[${i}]}"
 	done
-	token=$((16#${tokenHex} & 16#7fffffff))
+	totpValue=$((16#${totpHex} & 16#7fffffff))
 	# Truncate the hash and mask the result
 	
-	prompt_BOLD "${token:${#token}-6}"
+	prompt_BOLD "${totpValue:${#totpValue}-6}"
 	# Print the last 6 numbers
+	
+	unset totpValue totpHex hmacOffset hmacHash key timeStamp byteArray
 }
 
 initDatabase () {
@@ -89,30 +92,45 @@ showKey () {
 		exit 0
 	else
 		hexToken=`base32ToHex ${token}`
-		(( $opt_DEBUG )) && echo "${token}"
+		(( $opt_DEBUG )) && echo "${hexToken}"
 		# convert the key to hexadecimal value
 		genToken ${hexToken}
 	fi
+	
+	unset keyEntry token hexToken
 }
 
 addKey () {
-	read -p "${font_BOLD}Put your key here: ${style_RESET}" encodedKey
+	read -p "${font_BOLD}Put your base32 encoded key here: ${style_RESET}" encodedKey
 	name="$1"
-	echo "${name}:${encodedkey}" >> ${storeDir}/keys.db
+	echo "${name}:${encodedKey}" >> ${storeDir}/keys.db
+	prompt_REGU "Key added!"
 	# Store Base32 encoded keys in the file
+	
+	unset ${encodedKey}
 }
 
 delKey () {
-	prompt_WARN "WARNING!"
-	prompt_REGU "Removing this key ${font_BOLD}WON'T DISABLE${style_RESET} 2 Factor Auth for your account!"
-	prompt_REGU "If you don't have backup access, deleting this key could lock yourself out!"
-	read -p "${font_BOLD}Are you sure that you want to delete the key ${1}? [y/N]${style_RESET} " answer
-	if [[ $answer =~ (y|Y|yes) ]]; then
-		sed -i -e "/${1}:/d" "${storeDir}/keys.db"
-		printf '%b\n' "${font_BOLD}${1}${style_RESET} deleted."
+	echo "looking for ${1}..."
+	keyEntry=`grep "${1}:" ${storeDir}/keys.db`
+	token=${keyEntry:${#1}+1}
+	if [[ "$token" == "" ]]; then
+		prompt_BOLD "Key ${1} not found."
+		exit 0
 	else
-		printf '%b\n' "Key not changed."
+		prompt_WARN "WARNING!"
+		prompt_REGU "Removing this key ${font_BOLD}WON'T DISABLE${style_RESET} 2 Factor Auth for your account!"
+		prompt_REGU "If you don't have backup access, deleting this key could lock yourself out!"
+		read -p "${font_BOLD}Are you sure that you want to delete the key ${1}? [y/N]${style_RESET} " answer
+		if [[ $answer =~ (y|Y|yes) ]]; then
+			sed -i -e "/${1}:/d" "${storeDir}/keys.db"
+			prompt_BOLD "Key ${1} deleted."
+		else
+			prompt_REGU "Key not changed."
+		fi
 	fi
+	
+	unset token keyEntry
 }
 
 listKey () {
@@ -121,6 +139,8 @@ listKey () {
 	for keyEntry in ${keys}; do
 		echo ${keyEntry} | sed -e "s/:.*$//g"
 	done
+	
+	unset keyEntry keys
 }
 
 doTest () {
@@ -154,9 +174,9 @@ done
 
 case "$MAJOR" in
 	init)		initDatabase;;
-	show)		showKey "${PARAM}";;
-	add)		addKey "${PARAM}";;
-	del)		delKey "${PARAM}";;
+	show)		[[ ${PARAM} ]] && showKey "${PARAM}" || prompt_REGU "Key name required.";;
+	add)		[[ ${PARAM} ]] && addKey "${PARAM}" || prompt_REGU "Key name required.";;
+	del)		[[ ${PARAM} ]] && delKey "${PARAM}" || prompt_REGU "Key name required.";;
 	list)		listKey;;
 	help)		usage;;
 	test)		doTest;;

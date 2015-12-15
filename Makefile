@@ -7,6 +7,7 @@ DESTDIR		=
 libdir		= $(PREFIX)/lib
 bindir		= $(PREFIX)/bin
 completiondir	= ${PREFIX}/share/bash-completion/completions
+syscompletiondir= /usr/share/bash-completion/completions
 
 
 all: $(SCRIPTS)
@@ -23,7 +24,7 @@ install: $(SCRIPTS)
 	$(INSTALL) -m755 totp-cth-cli $(DESTDIR)$(bindir)/totp-cth-cli
 	$(INSTALL) -m644 lib/base32decoder.lib.sh $(DESTDIR)$(libdir)/totp-cth-cli/
 	$(INSTALL) -m644 lib/io.lib.sh $(DESTDIR)$(libdir)/totp-cth-cli/
-	$(INSTALL) -m644 conf/bash-completion $(DESTDIR)$(completiondir)/totp-cth-cli
+	$(INSTALL) -m644 conf/bash-completion $(DESTDIR)$(syscompletiondir)/totp-cth-cli
 
 clean: 
 	rm -f $(SCRIPTS)
@@ -31,6 +32,6 @@ clean:
 uninstall:
 	rm -rf $(DESTDIR)$(bindir)/totp-cth-cli
 	rm -rf $(DESTDIR)$(libdir)/totp-cth-cli
-	rm -rf $(DESTDIR)$(completiondir)/totp-cth-cli
+	rm -rf $(DESTDIR)$(syscompletiondir)/totp-cth-cli
 
 .PHONY: all clean install uninstall
