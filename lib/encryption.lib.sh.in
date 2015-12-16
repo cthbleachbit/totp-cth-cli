@@ -24,7 +24,10 @@ encryptSetup () {
 	prompt_BOLD "Invoking openssl to generate rsa key pair."
 	prompt_BOLD "Set a strong password when asked."
 	openssl genrsa -des3 -out ${storeDir}/databasePrivate.pem 4096
+	prompt_BOLD "Type your password again to export the public key"
+	
 	openssl rsa -in ${storeDir}/databasePrivate.pem -pubout -out ${storeDir}/databasePublic.pem
+	[ -f ${storeDir}/databasePublic.pem ] || return 1
 	# key generation complete
 	
 	aesKeyContent="${aesHex}:${ivHex}"
@@ -39,11 +42,13 @@ encryptSetup () {
 	chmod 0600 ${storeDir}/databasePrivate.pem
 	echo > ${storeDir}/encrypted.flag
 	rm -f ${storeDir}/keys.db
+	prompt_BOLD "Encryption enabled."
 }
 
 decryptSetup () {
 	[ -f ${storeDir}/encrypted.flag ] || exit 0
 	aesKeyContent=`getContentAES`
+	[ ${aesKeyContent} ] || exit 1
 	aesHex=`getHexKEY ${aesKeyContent}`
 	ivHex=`getHexIV ${aesKeyContent}`
 	execDecrypt ${aesHex} ${ivHex} > ${storeDir}/keys.db
@@ -52,10 +57,12 @@ decryptSetup () {
 	rm -f ${storeDir}/databasePublic.pem
 	rm -f ${storeDir}/aesKeyStore.encrypt
 	rm -f ${storeDir}/encrypted.flag
+	prompt_BOLD "Encryption disabled."
 }
 
 getContentAES () {
 	openssl rsautl -in ${storeDir}/aesKeyStore.encrypt -inkey ${storeDir}/databasePrivate.pem -decrypt
+	return $?
 	# print aes key and iv
 }
 
@@ -84,4 +91,25 @@ execEncrypt () {
 	# $3: ivHex
 	echo "${1}" | openssl enc -aes-256-cbc -e -out ${storeDir}/keys.db.encrypt -K ${2} -iv ${3}
 	# write input if keys changed) to file
+}
+
+readKeys () {
+	# $1: aesHex
+	# $2: ivHex
+	if [ -f ${storeDir}/encrypted.flag ]; then
+		execDecrypt ${1} ${2}
+	else
+		[ -f ${storeDir}/keys.db ] && cat ${storeDir}/keys.db || initDatabase
+	fi
+}
+
+writeKeys () {
+	# $1: in memory keys
+	# $2: aesHex
+	# $3: ivHex
+	if [ -f ${storeDir}/encrypted.flag ]; then
+		execEncrypt "${1}" ${2} ${3}
+	else
+		echo "${1}" > ${storeDir}/keys.db
+	fi
 }

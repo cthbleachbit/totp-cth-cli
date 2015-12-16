@@ -1,6 +1,13 @@
-#vim
+# vim
 *.tmp
 *.swp
 
+# gedit
+*~
+
+# Makefile generated
 totp-cth-cli
 lib/*.sh
+
+# packing
+pack/

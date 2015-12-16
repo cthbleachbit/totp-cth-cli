@@ -16,9 +16,9 @@
 storeDir="${HOME}/.totp-cth-cli"
 opt_TEST=0
 opt_DEBUG=0
-. '@libdir@/totp-cth-cli/base32decoder.lib.sh' 
-. '@libdir@/totp-cth-cli/io.lib.sh'
-. '@libdir@/totp-cth-cli/encryption.lib.sh'
+. '@libdir@/base32decoder.lib.sh' 
+. '@libdir@/io.lib.sh'
+. '@libdir@/encryption.lib.sh'
 
 usage () {
 	prompt_BOLD "Usage: totp-cth-cli <command> [--debug]"
@@ -40,7 +40,8 @@ usage () {
 
 genToken () {
 	key=$1
-	(( $opt_TEST )) && read -p "timeStamp in seconds/30:" timeStamp || timeStamp=$((`date +%s`/30 ))
+	(( $opt_TEST )) && read -p "timeStamp in seconds:" timeValue || timeValue=`date +%s`
+	timeStamp=$(( ${timeValue}/30 ))
 	# only ask for custom timestamp while testing
 	
 	timeStamp=`echo "obase=16;${timeStamp}"| bc`
@@ -70,26 +71,44 @@ genToken () {
 	totpValue=$((16#${totpHex} & 16#7fffffff))
 	# Truncate the hash and mask the result
 	
-	prompt_BOLD "${totpValue:${#totpValue}-6}"
+	prompt_BOLD "TOTP:	${totpValue:${#totpValue}-6}"
 	# Print the last 6 numbers
 	
+	expireTime=$(((16#${timeStamp}+1)*30-${timeValue}))
+	prompt_REGU "Expire:	${expireTime} seconds before expiration."
 	unset totpValue totpHex hmacOffset hmacHash key timeStamp byteArray
 }
 
 initDatabase () {
-	if [[ -d ${storeDir} ]]; then
-		prompt_BOLD "Key Storage exists at ${storeDir}/keys.db"
+	if [ -f ${storeDir}/keys.db* ]; then
+		prompt_BOLD "Key Storage exists at ${storeDir}"
+		exit 0
+	else
+		prompt_BOLD "Initializing database at ${storeDir}..."
+		mkdir ${storeDir}
+		touch ${storeDir}/keys.db
+		
+		read -p "${font_BOLD}Do you want to encrypt the key database? [Y/n]${style_RESET} " answer
+		if [[ $answer =~ (n|N|no) ]]; then
+			echo "Done!"
+		else
+			encryptSetup
+		fi
 		exit 0
 	fi
-	mkdir ${storeDir}
-	touch ${storeDir}/keys.db
-	echo "Done!"
-	exit 0
 }
 
 showKey () {
+	if [ -f ${storeDir}/encrypted.flag ]; then
+		prompt_BOLD "Encryption enabled. Input password to unlock."
+		aesKeyContent=`getContentAES`
+		[ ${aesKeyContent} ] || exit 1
+		aesHex=`getHexKEY ${aesKeyContent}`
+		ivHex=`getHexIV ${aesKeyContent}`
+	fi
+	
 	echo "looking for ${1}..."
-	keyInMem=`readKeys`
+	keyInMem=`readKeys ${aesHex} ${ivHex}`
 	keyEntry=`echo "${keyInMem}" | grep "${1}:"`
 	token=${keyEntry:${#1}+1}
 	# Get the encoded key from the file
@@ -107,20 +126,41 @@ showKey () {
 }
 
 addKey () {
-	keyInMem=`readKeys`
+	if [ -f ${storeDir}/encrypted.flag ]; then
+		prompt_BOLD "Encryption enabled. Input password to unlock."
+		aesKeyContent=`getContentAES`
+		[ ${aesKeyContent} ] || exit 1
+		aesHex=`getHexKEY ${aesKeyContent}`
+		ivHex=`getHexIV ${aesKeyContent}`
+	fi
+	
+	keyInMem=`readKeys "${aesHex}" "${ivHex}"`
 	read -p "${font_BOLD}Put your base32 encoded key here: ${style_RESET}" encodedKey
 	name="$1"
 	keyInMem=${keyInMem}`printf '\n%b\n' "${name}:${encodedKey}"`
-	writeKeys "${keyInMem}"
+	writeKeys "${keyInMem}" "${aesHex}" "${ivHex}"
 	prompt_REGU "Key added!"
 	# Store Base32 encoded keys in the file
+	
+	hexToken=`base32ToHex ${encodedKey}`
+	(( $opt_DEBUG )) && echo "${hexToken}"
+	# convert the key to hexadecimal value
+	genToken ${hexToken}
 	
 	unset ${encodedKey}
 }
 
 delKey () {
+	if [ -f ${storeDir}/encrypted.flag ]; then
+		prompt_BOLD "Encryption enabled. Input password to unlock."
+		aesKeyContent=`getContentAES`
+		[ ${aesKeyContent} ] || exit 1
+		aesHex=`getHexKEY ${aesKeyContent}`
+		ivHex=`getHexIV ${aesKeyContent}`
+	fi
+	
 	echo "looking for ${1}..."
-	keyInMem=`readKeys`
+	keyInMem=`readKeys "${aesHex}" "${ivHex}"`
 	keyEntry=`echo "${keyInMem}" | grep "${1}:"`
 	token=${keyEntry:${#1}+1}
 	if [[ "$token" == "" ]]; then
@@ -133,24 +173,32 @@ delKey () {
 		read -p "${font_BOLD}Are you sure that you want to delete the key ${1}? [y/N]${style_RESET} " answer
 		if [[ $answer =~ (y|Y|yes) ]]; then
 			keyInMem=`echo "${keyInMem}" | sed -e "/${1}:/d"`
-			writeKeys "${keyInMem}"
+			writeKeys "${keyInMem}" "${aesHex}" "${ivHex}"
 			prompt_BOLD "Key ${1} deleted."
 		else
 			prompt_REGU "Key not changed."
 		fi
 	fi
 	
-	unset token keyEntry
+	unset token keyEntry keyInMem
 }
 
 listKey () {
-	keyInMem=`readKeys`
+	if [ -f ${storeDir}/encrypted.flag ]; then
+		prompt_BOLD "Encryption enabled. Input password to unlock."
+		aesKeyContent=`getContentAES`
+		[ ${aesKeyContent} ] || exit 1
+		aesHex=`getHexKEY ${aesKeyContent}`
+		ivHex=`getHexIV ${aesKeyContent}`
+	fi
+	
+	keyInMem=`readKeys "${aesHex}" "${ivHex}"`
 	prompt_BOLD "Available Keys:"	
 	for keyEntry in ${keyInMem}; do
 		echo ${keyEntry} | sed -e "s/:.*$//g"
 	done
 	
-	unset keyEntry keys
+	unset keyEntry keyInMem
 }
 
 doTest () {

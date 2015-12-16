@@ -28,26 +28,3 @@ prompt_REGU () {
 prompt_WARN () {
 	printf '%b\n' "${color_RED}${font_BOLD}${1}${style_RESET}"
 }
-
-readKeys () {
-	if [ -f ${storeDir}/encrypted.flag ]; then
-		aesKeyContent=`getContentAES`
-		aesHex=`getHexKEY ${aesKeyContent}`
-		ivHex=`getHexIV ${aesKeyContent}`
-		execDecrypt ${aesHex} ${ivHex}
-	else
-		cat ${storeDir}/keys.db
-	fi
-}
-
-writeKeys () {
-	# $1: in memory keys
-	if [ -f ${storeDir}/encrypted.flag ]; then
-		aesKeyContent=`getContentAES`
-		aesHex=`getHexKEY ${aesKeyContent}`
-		ivHex=`getHexIV ${aesKeyContent}`
-		execEncrypt "${1}" ${aesHex} ${ivHex}
-	else
-		echo "${1}" > ${storeDir}/keys.db
-	fi
-}
