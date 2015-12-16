@@ -8,3 +8,8 @@ v0.7
 * DONE		Database encryption
 * DONE		Library structure
 * DONE		IO modulize
+
+v0.8
+======
+* PLAN		Cygwin Support
+* PLAN		Mac OS X Support
