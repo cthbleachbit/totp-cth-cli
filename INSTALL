@@ -1,6 +1,13 @@
-How to install?
+How to install? (And possible problems)
 =================================================
 
-1. make
+Because the script uses `openssl dgst -sha1 -mac HMAC` and the `-mac HMAC` was introduced in 1.0.0 series.
 
-2. sudo make install
+Check your openssl version first by using `openssl version` command. If you are on Linux, your `openssl` should be newer than `1.0.0`. Just install by typing these:
+
+1. `make`
+2. `sudo make install`
+
+In case that your system isn't shipped with a compatible version of `openssl`, you might need to update `openssl` manually by compiling the source code. 
+
+On Mac OS X which comes with `0.9.8zg` that doesn't recognize required parameters as I've mentioned in issue #2 please update openssl with homebrew.
