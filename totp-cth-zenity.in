@@ -12,3 +12,50 @@
 # License for more details.
 #==========================================================
 
+storeDir="${HOME}/.totp-cth-cli"
+gui_title="totp-cth-zenity"
+gui_showKey='Generate a specific password'
+gui_addKey='Add a key to database'
+gui_delKey='Remove a key from database'
+gui_listKey='Just show me my keys'
+gui_quit='Quit'
+
+if [[ -f ${storeDir}/encrypted.flag ]]; then
+	zenity --title=${gui_title} --error --text="Sorry I haven't implemented this on encryption yet."
+	exit 1
+fi
+
+list-key () {
+	case "$1" in
+		"show")		gui_text="Which password should I generate?";;
+		"del-key")	gui_text="Which key should I remove?";;
+		"list-key")	gui_text="Your Keys";;
+	esac
+	keyList=`totp-cth-cli list-key --minio`
+	keyAns=`echo ${keyList} | xargs zenity --title=${gui_title} --text="${gui_text}" --list --column "Keys"`
+	[[ ${keyAns} = "" ]] && return 0
+	echo ${keyAns}
+}
+
+show () {
+	selectedKey=`list-key "show"`
+	result=`totp-cth-cli show ${selectedKey} --minio`
+	expireTime=$((${result:7}))
+	zenity --title=${gui_title} --info --text="Password for ${selectedKey} is ${result:0:6}.\n${expireTime} second(s) before expiration."
+	exit 0
+}
+
+while (( 1 )); do
+taskAns=`zenity --title=${gui_title} --text="Choose your task." --list \
+                --print-column=2 --hide-column=2 --hide-header \
+                --column "Operations"	--column "Param" \
+                "${gui_showKey}"	"show" \
+                "${gui_listKey}"	"list-key" \
+                "${gui_quit}"           "quit" `
+
+case "$taskAns" in
+	"show")		show;;
+	"list-key")	list-key "${taskAns}";;
+	"quit"|*)	exit 0;;
+esac
+done
