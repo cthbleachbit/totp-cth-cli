@@ -16,6 +16,7 @@
 storeDir="${HOME}/.totp-cth-cli"
 opt_TEST=0
 opt_DEBUG=0
+opt_MINIO=0
 . '@libdir@/base32decoder.lib.sh' 
 . '@libdir@/io.lib.sh'
 . '@libdir@/encryption.lib.sh'
@@ -66,11 +67,11 @@ genToken () {
 	totpValue=$((16#${totpHex} & 16#7fffffff))
 	# Truncate the hash and mask the result
 	
-	prompt_BOLD "TOTP:	${totpValue:${#totpValue}-6}"
+	(( $opt_MINIO )) && echo -n "${totpValue:${#totpValue}-6}:" || prompt_BOLD "TOTP:\t${totpValue:${#totpValue}-6}"
 	# Print the last 6 numbers
 	
 	expireTime=$(((16#${timeStamp}+1)*30-${timeValue}))
-	prompt_REGU "Expire:	${expireTime} seconds before expiration."
+	(( $opt_MINIO )) && echo "${expireTime}" || prompt_REGU "\t${expireTime} seconds to expire."
 	unset totpValue totpHex hmacOffset hmacHash key timeStamp
 }
 
@@ -102,7 +103,7 @@ showKey () {
 		ivHex=`getHexIV ${aesKeyContent}`
 	fi
 	
-	echo "looking for ${1}..."
+	(( $opt_MINIO)) || echo "looking for ${1}..."
 	keyInMem=`readKeys ${aesHex} ${ivHex}`
 	keyEntry=`echo "${keyInMem}" | grep "${1}:"`
 	token=${keyEntry:${#1}+1}
@@ -134,7 +135,7 @@ addKey () {
 	name="$1"
 	keyInMem=${keyInMem}`printf '\n%b\n' "${name}:${encodedKey}"`
 	writeKeys "${keyInMem}" "${aesHex}" "${ivHex}"
-	prompt_REGU "Key added!"
+	(( $opt_MINIO )) || prompt_REGU "Key added!"
 	# Store Base32 encoded keys in the file
 	
 	hexToken=`base32ToHex ${encodedKey}`
@@ -188,7 +189,7 @@ listKey () {
 	fi
 	
 	keyInMem=`readKeys "${aesHex}" "${ivHex}"`
-	prompt_BOLD "Available Keys:"	
+	(( ${opt_MINIO} )) || prompt_BOLD "Available Keys:"	
 	for keyEntry in ${keyInMem}; do
 		echo ${keyEntry} | sed -e "s/:.*$//g"
 	done
@@ -222,6 +223,7 @@ for var in "$@"; do
 		"enable-enc")	MAJOR="encrypt";;
 		"disable-enc")	MAJOR="decrypt";;
 		"--debug")	opt_DEBUG=1;;
+		"--minio")	opt_MINIO=1;;
 		*)		PARAM="$var";;
 	esac
 	shift
