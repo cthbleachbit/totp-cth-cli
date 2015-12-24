@@ -31,7 +31,7 @@ usage () {
 	prompt_REGU "	help		print this help message"
 	prompt_REGU "	test		interactive testing sector"
 	prompt_REGU "	--debug		Show Debug information"
-	prompt_BOLD "Advanced:"
+	prompt_BOLD "Advanced (and unstable):"
 	prompt_REGU "	enable-enc	setup database encryption"
 	prompt_REGU "	disable-enc	disable database encryption"
 	prompt_REGU "			(disable and re-enable to change password)"
@@ -40,7 +40,7 @@ usage () {
 
 genToken () {
 	key=$1
-	(( $opt_TEST )) && read -p "timeStamp in seconds:" timeValue || timeValue=`date +%s`
+	(( $opt_TEST )) && read -p "timeStamp in seconds: " timeValue || timeValue=`date +%s`
 	timeStamp=$(( ${timeValue}/30 ))
 	# only ask for custom timestamp while testing
 	
@@ -51,23 +51,18 @@ genToken () {
 	for (( i=0; i<${#timeStamp}; i=i+2)); do
 		echo -n -e "\x${timeStamp:${i}:2}" >> ${storeDir}/time.tmp
 	done
-	(( $opt_DEBUG )) && echo "counter:${timeStamp}"
+	(( $opt_DEBUG )) && echo "[DEBUG]counter: ${timeStamp}"
 	# convert time to Hex value
 	
 	local hmacHash
 	hmacHash=$(openssl dgst -sha1 -mac HMAC -macopt hexkey:"${key}" ${storeDir}/time.tmp | sed -e 's/^.* //')
-	(( $opt_DEBUG )) && echo "hmacHash:${hmacHash}"
+	(( $opt_DEBUG )) && echo "[DEBUG]hmacHash: ${hmacHash}"
 	# Generate the hash
-	
-	for (( i=0; i<=19; i=i+1 )); do
-		byteArray[${i}]=${hmacHash:${i}*2:2}
-	done
-	hmacOffset=$((16#${hmacHash:39}))
+
+	hmacOffset=$((16#${hmacHash:39}*2))
 	# Got the offset
 	
-	for (( i=${hmacOffset}; i<=${hmacOffset}+3; i++ )); do
-		totpHex="${totpHex}""${byteArray[${i}]}"
-	done
+	totpHex=${hmacHash:${hmacOffset}:8}
 	totpValue=$((16#${totpHex} & 16#7fffffff))
 	# Truncate the hash and mask the result
 	
@@ -76,7 +71,7 @@ genToken () {
 	
 	expireTime=$(((16#${timeStamp}+1)*30-${timeValue}))
 	prompt_REGU "Expire:	${expireTime} seconds before expiration."
-	unset totpValue totpHex hmacOffset hmacHash key timeStamp byteArray
+	unset totpValue totpHex hmacOffset hmacHash key timeStamp
 }
 
 initDatabase () {
@@ -88,11 +83,11 @@ initDatabase () {
 		mkdir ${storeDir}
 		touch ${storeDir}/keys.db
 		
-		read -p "${font_BOLD}Do you want to encrypt the key database? [Y/n]${style_RESET} " answer
-		if [[ $answer =~ (n|N|no) ]]; then
-			echo "Done!"
-		else
+		read -p "${font_BOLD}Do you want to encrypt the key database? [y/N]${style_RESET} " answer
+		if [[ $answer =~ (y|Y|yes) ]]; then
 			encryptSetup
+		else
+			prompt_BOLD "Done!"
 		fi
 		exit 0
 	fi
@@ -117,7 +112,7 @@ showKey () {
 		exit 0
 	else
 		hexToken=`base32ToHex ${token}`
-		(( $opt_DEBUG )) && echo "${hexToken}"
+		(( $opt_DEBUG )) && echo "[DEBUG]Secret Hex: ${hexToken}"
 		# convert the key to hexadecimal value
 		genToken ${hexToken}
 	fi
