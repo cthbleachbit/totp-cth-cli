@@ -7,6 +7,7 @@
 
 # Makefile generated
 totp-cth-cli
+totp-cth-zenity
 lib/*.sh
 
 # packing
