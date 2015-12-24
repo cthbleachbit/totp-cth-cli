@@ -95,14 +95,3 @@ base32ToHex () {
 	unset hexBuffer
 }
 
-# base32 encoded string -> ASCII string (maybe with illegal characters)
-base32ToString () {
-	local hexCode
-	hexCode=`base32ToHex $1`
-	for (( i=0; i<${#hexCode}; i=i+2)); do
-		stringBuffer=${stringBuffer}"\x${hexCode:i:2}"
-	done
-	printf "%b" "$stringBuffer"
-	unset stringBuffer
-}
-
