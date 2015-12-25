@@ -5,4 +5,4 @@ Exec=totp-cth-zenity
 Icon=lock
 Terminal=false
 Type=Application
-StartupNotify=false
+Categories=Utility;
