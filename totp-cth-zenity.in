@@ -43,8 +43,11 @@ show () {
 	result=`totp-cth-cli show ${selectedKey} --minio`
 	expireTime=${result:7}
 	zenity --title=${gui_title} --info --text="Password for ${selectedKey} is ${result:0:6}.\n${expireTime} second(s) before expiration."
-	exit 0
 }
+
+## Main code
+which zenity
+[[ "$?" = 0 ]] || exit 1
 
 while (( 1 )); do
 taskAns=`zenity --title=${gui_title} --text="${gui_taskText}" --list \
