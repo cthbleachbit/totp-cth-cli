@@ -7,3 +7,10 @@ Dependencies
 ----------------------
 * `bc` for base conversions
 * `openssl` for hmac hashes
+
+Use `totp-cth-cli help` for more information on command line tool.
+
+totp-cth-zenity
+----------------------
+
+`zenity` is required for this script. Type `totp-cth-zenity` or use "TOTP Zenity" Icon in applications menu to start.
