@@ -14,6 +14,7 @@
 
 storeDir="${HOME}/.totp-cth-cli"
 gui_title="totp-cth-zenity"
+gui_taskText="Choose your task. (add key and remove key are not implemented yet.)"
 gui_showKey='Generate a specific password'
 gui_addKey='Add a key to database'
 gui_delKey='Remove a key from database'
@@ -40,13 +41,13 @@ list-key () {
 show () {
 	selectedKey=`list-key "show"`
 	result=`totp-cth-cli show ${selectedKey} --minio`
-	expireTime=$((${result:7}))
+	expireTime=${result:7}
 	zenity --title=${gui_title} --info --text="Password for ${selectedKey} is ${result:0:6}.\n${expireTime} second(s) before expiration."
 	exit 0
 }
 
 while (( 1 )); do
-taskAns=`zenity --title=${gui_title} --text="Choose your task." --list \
+taskAns=`zenity --title=${gui_title} --text="${gui_taskText}" --list \
                 --print-column=2 --hide-column=2 --hide-header \
                 --column "Operations"	--column "Param" \
                 "${gui_showKey}"	"show" \
