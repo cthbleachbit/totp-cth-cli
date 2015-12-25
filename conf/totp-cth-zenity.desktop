@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=TOTP Zenity
+Comment=Access your TOTP passwords
+Exec=totp-cth-zenity
+Icon=lock
+Terminal=false
+Type=Application
+StartupNotify=false

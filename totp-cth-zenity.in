@@ -14,7 +14,7 @@
 
 storeDir="${HOME}/.totp-cth-cli"
 gui_title="totp-cth-zenity"
-gui_taskText="Choose your task. (add key and remove key are not implemented yet.)"
+gui_taskText="Choose your task. (To modify key sets, use totp-cth-cli command line tool.)"
 gui_showKey='Generate a specific password'
 gui_addKey='Add a key to database'
 gui_delKey='Remove a key from database'
@@ -35,6 +35,7 @@ list-key () {
 	keyList=`totp-cth-cli list-key --minio`
 	keyAns=`echo ${keyList} | xargs zenity --title=${gui_title} --text="${gui_text}" --list --column "Keys"`
 	[[ ${keyAns} = "" ]] && return 0
+	echo "${keyAns}"
 }
 
 show () {
