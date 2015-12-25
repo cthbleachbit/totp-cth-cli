@@ -31,8 +31,10 @@ usage () {
 	prompt_REGU "	list-key	list stored keys"
 	prompt_REGU "	help		print this help message"
 	prompt_REGU "	test		interactive testing sector"
+	prompt_BOLD "Options:"
 	prompt_REGU "	--debug		Show Debug information"
-	prompt_BOLD "Advanced (and unstable):"
+	prompt_REGU "	--minio		MINimum I/O, only show result."
+	prompt_BOLD "Advanced commands (and unstable):"
 	prompt_REGU "	enable-enc	setup database encryption"
 	prompt_REGU "	disable-enc	disable database encryption"
 	prompt_REGU "			(disable and re-enable to change password)"
@@ -84,7 +86,7 @@ initDatabase () {
 		mkdir ${storeDir}
 		touch ${storeDir}/keys.db
 		
-		read -p "${font_BOLD}Do you want to encrypt the key database? [y/N]${style_RESET} " answer
+		(( $opt_MINIO )) || read -p "${font_BOLD}Do you want to encrypt the key database? [y/N]${style_RESET} " answer
 		if [[ $answer =~ (y|Y|yes) ]]; then
 			encryptSetup
 		else
@@ -141,7 +143,7 @@ addKey () {
 	hexToken=`base32ToHex ${encodedKey}`
 	(( $opt_DEBUG )) && echo "${hexToken}"
 	# convert the key to hexadecimal value
-	genToken ${hexToken}
+	(( $opt_MINIO )) || genToken ${hexToken}
 	
 	unset ${encodedKey}
 }
