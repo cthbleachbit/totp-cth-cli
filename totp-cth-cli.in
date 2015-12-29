@@ -20,6 +20,7 @@ opt_MINIO=0
 . '@libdir@/base32decoder.lib.sh' 
 . '@libdir@/io.lib.sh'
 . '@libdir@/encryption.lib.sh'
+. '@libdir@/strings.lib.sh'
 
 usage () {
 	prompt_BOLD "Usage: totp-cth-cli <command> [--debug]"
@@ -98,7 +99,7 @@ initDatabase () {
 
 showKey () {
 	if [ -f ${storeDir}/encrypted.flag ]; then
-		prompt_BOLD "Encryption enabled. Input password to unlock."
+		prompt_BOLD "${cli_enc_detected}"
 		aesKeyContent=`getContentAES`
 		[ ${aesKeyContent} ] || exit 1
 		aesHex=`getHexKEY ${aesKeyContent}`
@@ -125,7 +126,7 @@ showKey () {
 
 addKey () {
 	if [ -f ${storeDir}/encrypted.flag ]; then
-		prompt_BOLD "Encryption enabled. Input password to unlock."
+		prompt_BOLD "${cli_enc_detected}"
 		aesKeyContent=`getContentAES`
 		[ ${aesKeyContent} ] || exit 1
 		aesHex=`getHexKEY ${aesKeyContent}`
@@ -150,7 +151,7 @@ addKey () {
 
 delKey () {
 	if [ -f ${storeDir}/encrypted.flag ]; then
-		prompt_BOLD "Encryption enabled. Input password to unlock."
+		prompt_BOLD "${cli_enc_detected}"
 		aesKeyContent=`getContentAES`
 		[ ${aesKeyContent} ] || exit 1
 		aesHex=`getHexKEY ${aesKeyContent}`
@@ -166,8 +167,7 @@ delKey () {
 		exit 0
 	else
 		prompt_WARN "WARNING!"
-		prompt_REGU "Removing this key ${font_BOLD}WON'T DISABLE${style_RESET} 2 Factor Auth for your account!"
-		prompt_REGU "If you don't have backup access, deleting this key could lock yourself out!"
+		prompt_REGU "${cli_del_key_warning}"
 		read -p "${font_BOLD}Are you sure that you want to delete the key ${1}? [y/N]${style_RESET} " answer
 		if [[ $answer =~ (y|Y|yes) ]]; then
 			keyInMem=`echo "${keyInMem}" | sed -e "/${1}:/d"`
@@ -183,7 +183,7 @@ delKey () {
 
 listKey () {
 	if [ -f ${storeDir}/encrypted.flag ]; then
-		prompt_BOLD "Encryption enabled. Input password to unlock."
+		prompt_BOLD "${cli_enc_detected}"
 		aesKeyContent=`getContentAES`
 		[ ${aesKeyContent} ] || exit 1
 		aesHex=`getHexKEY ${aesKeyContent}`

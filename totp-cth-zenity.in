@@ -12,25 +12,21 @@
 # License for more details.
 #==========================================================
 
+. '@libdir@/strings.lib.sh'
+
 storeDir="${HOME}/.totp-cth-cli"
-gui_title="totp-cth-zenity"
-gui_taskText="Choose your task. (To modify key sets, use totp-cth-cli command line tool.)"
-gui_showKey='Generate a password'
-gui_addKey='Add a key to database'
-gui_delKey='Remove a key from database'
-gui_listKey='Just show me my keys'
-gui_quit='Quit'
+
 
 if [[ -f ${storeDir}/encrypted.flag ]]; then
-	zenity --title=${gui_title} --error --text="Sorry I haven't implemented this on encryption yet."
+	zenity --title="${gui_title}" --error --text="${gui_not_implemented}"
 	exit 1
 fi
 
 list-key () {
 	case "$1" in
-		"show")		gui_text="Which password should I generate?";;
-		"del-key")	gui_text="Which key should I remove?";;
-		"list-key")	gui_text="Your Keys";;
+		"show")		gui_text="${gui_which_show}";;
+		"del-key")	gui_text="${gui_which_remove}";;
+		"list-key")	gui_text="${gui_just_list}";;
 	esac
 	keyList=`totp-cth-cli list-key --minio`
 	keyAns=`echo ${keyList} | xargs zenity --title=${gui_title} --text="${gui_text}" --list --column "Keys"`
