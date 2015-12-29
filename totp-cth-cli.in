@@ -244,5 +244,7 @@ case "$MAJOR" in
 	*)		usage;;
 esac
 
+chmod 0600 ${storeDir}/*
+# forcing set file permission
 (( $opt_DEBUG )) || rm -rf ${storeDir}/*.tmp
 exit 0
