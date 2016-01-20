@@ -44,23 +44,23 @@ usage () {
 
 genToken () {
 	key=$1
-	(( $opt_TEST )) && read -p "timeStamp in seconds: " timeValue || timeValue=`date +%s`
+	(( opt_TEST )) && read -p "timeStamp in seconds: " timeValue || timeValue=`date +%s`
 	timeStamp=$(( ${timeValue}/30 ))
 	# only ask for custom timestamp while testing
 	
-	timeStamp=`echo "obase=16;${timeStamp}"| bc`
+	timeStamp=$(echo "obase=16;${timeStamp}"| bc)
 	for (( i=${#timeStamp}; i<16; i++)); do
 		timeStamp="0"${timeStamp}
 	done
 	for (( i=0; i<${#timeStamp}; i=i+2)); do
 		echo -n -e "\x${timeStamp:${i}:2}" >> ${storeDir}/time.tmp
 	done
-	(( $opt_DEBUG )) && echo "[DEBUG]counter: ${timeStamp}"
+	(( opt_DEBUG )) && echo "[DEBUG]counter: ${timeStamp}"
 	# convert time to Hex value
 	
 	local hmacHash
 	hmacHash=$(openssl dgst -sha1 -mac HMAC -macopt hexkey:"${key}" ${storeDir}/time.tmp | sed -e 's/^.* //')
-	(( $opt_DEBUG )) && echo "[DEBUG]hmacHash: ${hmacHash}"
+	(( opt_DEBUG )) && echo "[DEBUG]hmacHash: ${hmacHash}"
 	# Generate the hash
 
 	hmacOffset=$((16#${hmacHash:39}*2))
@@ -70,11 +70,11 @@ genToken () {
 	totpValue=$((16#${totpHex} & 16#7fffffff))
 	# Truncate the hash and mask the result
 	
-	(( $opt_MINIO )) && echo -n "${totpValue:${#totpValue}-6}:" || prompt_BOLD "TOTP:\t${totpValue:${#totpValue}-6}"
+	(( opt_MINIO )) && echo -n "${totpValue:${#totpValue}-6}:" || prompt_BOLD "TOTP:\t${totpValue:${#totpValue}-6}"
 	# Print the last 6 numbers
 	
 	expireTime=$(((16#${timeStamp}+1)*30-${timeValue}))
-	(( $opt_MINIO )) && echo "${expireTime}" || prompt_REGU "\t${expireTime} seconds to expire."
+	(( opt_MINIO )) && echo "${expireTime}" || prompt_REGU "\t${expireTime} seconds to expire."
 	unset totpValue totpHex hmacOffset hmacHash key timeStamp
 }
 
@@ -87,7 +87,7 @@ initDatabase () {
 		mkdir ${storeDir}
 		touch ${storeDir}/keys.db
 		
-		(( $opt_MINIO )) || read -p "${font_BOLD}Do you want to encrypt the key database? [y/N]${style_RESET} " answer
+		(( opt_MINIO )) || read -p "${font_BOLD}Do you want to encrypt the key database? [y/N]${style_RESET} " answer
 		if [[ $answer =~ (y|Y|yes) ]]; then
 			encryptSetup
 		else
@@ -100,23 +100,23 @@ initDatabase () {
 showKey () {
 	if [ -f ${storeDir}/encrypted.flag ]; then
 		prompt_BOLD "${cli_enc_detected}"
-		aesKeyContent=`getContentAES`
+		aesKeyContent=$(getContentAES)
 		[ ${aesKeyContent} ] || exit 1
-		aesHex=`getHexKEY ${aesKeyContent}`
-		ivHex=`getHexIV ${aesKeyContent}`
+		aesHex=$(getHexKEY ${aesKeyContent})
+		ivHex=$(getHexIV ${aesKeyContent})
 	fi
 	
-	(( $opt_MINIO)) || echo "looking for ${1}..."
-	keyInMem=`readKeys ${aesHex} ${ivHex}`
-	keyEntry=`echo "${keyInMem}" | grep "${1}:"`
+	(( opt_MINIO )) || echo "looking for ${1}..."
+	keyInMem=$(readKeys ${aesHex} ${ivHex})
+	keyEntry=$(echo "${keyInMem}" | grep "${1}:")
 	token=${keyEntry:${#1}+1}
 	# Get the encoded key from the file
 	if [[ "$token" == "" ]]; then
 		prompt_BOLD "Nothing found."
 		exit 0
 	else
-		hexToken=`base32ToHex ${token}`
-		(( $opt_DEBUG )) && echo "[DEBUG]Secret Hex: ${hexToken}"
+		hexToken=$(base32ToHex ${token})
+		(( opt_DEBUG )) && echo "[DEBUG]Secret Hex: ${hexToken}"
 		# convert the key to hexadecimal value
 		genToken ${hexToken}
 	fi
@@ -127,24 +127,24 @@ showKey () {
 addKey () {
 	if [ -f ${storeDir}/encrypted.flag ]; then
 		prompt_BOLD "${cli_enc_detected}"
-		aesKeyContent=`getContentAES`
+		aesKeyContent=$(getContentAES)
 		[ ${aesKeyContent} ] || exit 1
-		aesHex=`getHexKEY ${aesKeyContent}`
-		ivHex=`getHexIV ${aesKeyContent}`
+		aesHex=$(getHexKEY ${aesKeyContent})
+		ivHex=$(getHexIV ${aesKeyContent})
 	fi
 	
-	keyInMem=`readKeys "${aesHex}" "${ivHex}"`
+	keyInMem=$(readKeys "${aesHex}" "${ivHex}")
 	read -p "${font_BOLD}Put your base32 encoded key here: ${style_RESET}" encodedKey
 	name="$1"
 	keyInMem=${keyInMem}`printf '\n%b\n' "${name}:${encodedKey}"`
 	writeKeys "${keyInMem}" "${aesHex}" "${ivHex}"
-	(( $opt_MINIO )) || prompt_REGU "Key added!"
+	(( opt_MINIO )) || prompt_REGU "Key added!"
 	# Store Base32 encoded keys in the file
 	
-	hexToken=`base32ToHex ${encodedKey}`
-	(( $opt_DEBUG )) && echo "${hexToken}"
+	hexToken=$(base32ToHex ${encodedKey})
+	(( opt_DEBUG )) && echo "${hexToken}"
 	# convert the key to hexadecimal value
-	(( $opt_MINIO )) || genToken ${hexToken}
+	(( opt_MINIO )) || genToken ${hexToken}
 	
 	unset ${encodedKey}
 }
@@ -152,15 +152,15 @@ addKey () {
 delKey () {
 	if [ -f ${storeDir}/encrypted.flag ]; then
 		prompt_BOLD "${cli_enc_detected}"
-		aesKeyContent=`getContentAES`
+		aesKeyContent=$(getContentAES)
 		[ ${aesKeyContent} ] || exit 1
-		aesHex=`getHexKEY ${aesKeyContent}`
-		ivHex=`getHexIV ${aesKeyContent}`
+		aesHex=$(getHexKEY ${aesKeyContent})
+		ivHex=$(getHexIV ${aesKeyContent})
 	fi
 	
 	echo "looking for ${1}..."
-	keyInMem=`readKeys "${aesHex}" "${ivHex}"`
-	keyEntry=`echo "${keyInMem}" | grep "${1}:"`
+	keyInMem=$(readKeys "${aesHex}" "${ivHex}")
+	keyEntry=$(echo "${keyInMem}" | grep "${1}:")
 	token=${keyEntry:${#1}+1}
 	if [[ "$token" == "" ]]; then
 		prompt_BOLD "Key ${1} not found."
@@ -170,7 +170,7 @@ delKey () {
 		prompt_REGU "${cli_del_key_warning}"
 		read -p "${font_BOLD}Are you sure that you want to delete the key ${1}? [y/N]${style_RESET} " answer
 		if [[ $answer =~ (y|Y|yes) ]]; then
-			keyInMem=`echo "${keyInMem}" | sed -e "/${1}:/d"`
+			keyInMem=$(echo "${keyInMem}" | sed -e "/${1}:/d")
 			writeKeys "${keyInMem}" "${aesHex}" "${ivHex}"
 			prompt_BOLD "Key ${1} deleted."
 		else
@@ -184,14 +184,14 @@ delKey () {
 listKey () {
 	if [ -f ${storeDir}/encrypted.flag ]; then
 		prompt_BOLD "${cli_enc_detected}"
-		aesKeyContent=`getContentAES`
+		aesKeyContent=$(getContentAES)
 		[ ${aesKeyContent} ] || exit 1
-		aesHex=`getHexKEY ${aesKeyContent}`
-		ivHex=`getHexIV ${aesKeyContent}`
+		aesHex=$(getHexKEY ${aesKeyContent})
+		ivHex=$(getHexIV ${aesKeyContent})
 	fi
 	
-	keyInMem=`readKeys "${aesHex}" "${ivHex}"`
-	(( ${opt_MINIO} )) || prompt_BOLD "Available Keys:"	
+	keyInMem=$(readKeys "${aesHex}" "${ivHex}")
+	(( opt_MINIO )) || prompt_BOLD "Available Keys:"	
 	for keyEntry in ${keyInMem}; do
 		echo ${keyEntry} | sed -e "s/:.*$//g"
 	done
@@ -246,5 +246,5 @@ esac
 
 chmod 0600 ${storeDir}/*
 # forcing set file permission
-(( $opt_DEBUG )) || rm -rf ${storeDir}/*.tmp
+(( opt_DEBUG )) || rm -rf ${storeDir}/*.tmp
 exit 0

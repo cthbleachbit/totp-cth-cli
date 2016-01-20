@@ -66,7 +66,7 @@ convertBy40Bit () {
 	
 	local output40BitBinary
 	for (( i=0; i<8; i++)); do
-		output40BitBinary="${output40BitBinary}`convertBy5Bit ${input40Bit:${i}:1}`"
+		output40BitBinary="${output40BitBinary}"$(convertBy5Bit ${input40Bit:${i}:1})
 	done
 	echo -n ${output40BitBinary}
 	unset output40BitBinary
@@ -77,7 +77,7 @@ decodeBase32 () {
 	local outputBinaryCode
 	input=$1
 	for (( i=0; i<${#input}; i=${i}+8)); do
-		outputBinaryCode="${outputBinaryCode}`convertBy40Bit ${input:${i}:8}`"
+		outputBinaryCode="${outputBinaryCode}"$(convertBy40Bit ${input:${i}:8})
 	done
 	echo -n ${outputBinaryCode}
 	unset outputBinaryCode
@@ -86,11 +86,11 @@ decodeBase32 () {
 # base32 encoded string -> hexadecimal string
 base32ToHex () {
 	local binCode
-	binCode=`decodeBase32 $1`
+	binCode=$(decodeBase32 $1)
 	local hexBuffer
 	for (( i=0; i<${#binCode}; i=i+4)); do
 		hexBuffer=$((2#${binCode:$[i]:4}))
-		echo -n `echo "obase=16;${hexBuffer}" | bc`
+		echo -n $(echo "obase=16;${hexBuffer}" | bc)
 	done
 	unset hexBuffer
 }

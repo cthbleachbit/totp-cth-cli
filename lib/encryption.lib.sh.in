@@ -19,8 +19,8 @@
 encryptSetup () {
 	[ -f ${storeDir}/encrypted.flag ] && exit 0
 	local aesKey
-	aesHex=`openssl rand -hex 16`
-	ivHex=`openssl rand -hex 16`
+	aesHex=$(openssl rand -hex 16)
+	ivHex=$(openssl rand -hex 16)
 	prompt_BOLD "Invoking openssl to generate rsa key pair."
 	prompt_BOLD "Set a strong password when asked."
 	openssl genrsa -des3 -out ${storeDir}/databasePrivate.pem 4096
@@ -47,10 +47,10 @@ encryptSetup () {
 
 decryptSetup () {
 	[ -f ${storeDir}/encrypted.flag ] || exit 0
-	aesKeyContent=`getContentAES`
+	aesKeyContent=$(getContentAES)
 	[ ${aesKeyContent} ] || exit 1
-	aesHex=`getHexKEY ${aesKeyContent}`
-	ivHex=`getHexIV ${aesKeyContent}`
+	aesHex=$(getHexKEY ${aesKeyContent})
+	ivHex=$(getHexIV ${aesKeyContent})
 	execDecrypt ${aesHex} ${ivHex} > ${storeDir}/keys.db
 	rm -f ${storeDir}/keys.db.encrypt
 	rm -f ${storeDir}/databasePrivate.pem
@@ -68,13 +68,13 @@ getContentAES () {
 
 getHexKEY () {
 	# $1: aesKeyContent
-	aesHex=`echo ${1} | sed -e 's/:.*$//g'`
+	aesHex=$(echo ${1} | sed -e 's/:.*$//g')
 	echo ${aesHex}
 }
 
 getHexIV () {
 	# $1: aesKeyContent
-	ivHex=`echo ${1} | sed -e 's/^.*://g'`
+	ivHex=$(echo ${1} | sed -e 's/^.*://g')
 	echo ${ivHex}
 }
 
