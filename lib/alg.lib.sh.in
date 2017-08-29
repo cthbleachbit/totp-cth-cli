@@ -1,0 +1,63 @@
+#==========================================================
+# totp-cth-cli
+# Actual Algorithms
+# Written by cth451 <cth451@gmail.com>
+# Licensed under LGPL 3
+#
+# This program is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Lesser General Public
+# License for more details.
+#==========================================================
+
+storeDir="${HOME}/.totp-cth-cli"
+. '@libdir@/base32decoder.lib.sh'
+
+getCounter () {
+	echo -n $(( $1/30 ))
+}
+
+getExpire () {
+	echo -n $(( $1 % 30 ))
+}
+
+# $1 = input int
+# $2 = padding to length (int)
+toHex () {
+	[[ $2 ]] && padding=$2 || padding=0
+	hex=$(echo "obase=16;$1" | bc)
+	for (( i=${#hex}; i<${padding}; i++)); do
+		echo -n 0
+	done
+	echo -n ${hex}
+}
+
+genToken () {
+	key=$1
+	(( opt_TEST )) && read -p "timeStamp in seconds: " timeValue || timeValue=`date +%s`
+	counter=$(getCounter ${timeValue})
+	# only ask for custom timestamp while testing
+	
+	counter=$(toHex ${counter} 16)
+	for (( i=0; i<${#counter}; i=i+2)); do
+		echo -n -e "\x${counter:${i}:2}" >> ${storeDir}/time.tmp
+	done
+	(( opt_DEBUG )) && echo "[DEBUG]counter: ${counter}"
+	# convert time to Hex value
+	
+	local hmacHash
+	hmacHash=$(openssl dgst -sha1 -mac HMAC -macopt hexkey:"${key}" ${storeDir}/time.tmp | sed -e 's/^.* //')
+	(( opt_DEBUG )) && echo "[DEBUG]hmacHash: ${hmacHash}"
+	# Generate the hash
+
+	hmacOffset=$((16#${hmacHash:39}*2))
+	# Got the offset
+	
+	totpHex=${hmacHash:${hmacOffset}:8}
+	totpValue=$((16#${totpHex} & 16#7fffffff))
+	# Truncate the hash and mask the result
+	
+	echo -n "${totpValue:${#totpValue}-6}"
+	# Print the last 6 numbers
+}

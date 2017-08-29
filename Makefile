@@ -1,4 +1,4 @@
-SCRIPTS		= totp-cth-cli totp-cth-zenity lib/base32decoder.lib.sh lib/io.lib.sh lib/encryption.lib.sh lib/strings.lib.sh
+SCRIPTS		= totp-cth-cli totp-cth-zenity lib/base32decoder.lib.sh lib/io.lib.sh lib/encryption.lib.sh lib/strings.lib.sh lib/alg.lib.sh
 SED		= /bin/sed
 SHELL		= /bin/bash
 PREFIX		= /usr/local
@@ -38,6 +38,7 @@ install: $(SCRIPTS)
 	$(INSTALL) -m644 lib/io.lib.sh $(DESTDIR)$(libdir)/
 	$(INSTALL) -m644 lib/encryption.lib.sh $(DESTDIR)$(libdir)/
 	$(INSTALL) -m644 lib/strings.lib.sh $(DESTDIR)$(libdir)/
+	$(INSTALL) -m644 lib/alg.lib.sh $(DESTDIR)$(libdir)/
 	$(INSTALL) -m644 conf/bash-completion $(DESTDIR)$(syscompletiondir)/totp-cth-cli
 	$(INSTALL) -m644 conf/bash-completion $(DESTDIR)$(syscompletiondir)/totp-cth-cli
 	$(INSTALL) -m755 conf/totp-cth-zenity.desktop $(DESTDIR)$(sysapplicationdir)
