@@ -1,0 +1,32 @@
+#==========================================================
+# totp-cth-cli
+# URI and QR code
+# Written by cth451 <cth451@gmail.com>
+# Licensed under LGPL 3
+#
+# This program is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE. See the GNU Lesser General Public
+# License for more details.
+#==========================================================
+
+# $1 = length of bytes
+randomBase32() {
+	dd if=/dev/urandom bs=$1 count=1 2>/dev/null | base32
+}
+
+htmlize() {
+	echo -n "$@" | sed -e "s/[[:blank:]]/%20/g"
+}
+
+# $1 = key in base32
+# $2 = Desc
+# $3 = Issuer
+uri() {
+	echo -n "otpauth://totp/$(htmlize $2)?secret=${1}&issuer=$(htmlize $3)"
+}
+
+qr() {
+	qrencode -t ANSI "$@"
+}
