@@ -44,7 +44,7 @@ usage () {
 }
 
 genTokenRoutine () {
-	pass=$(genToken $1)
+	pass=$(genToken $1 `date +%s`)
 	(( opt_MINIO )) && echo -n ${pass} || prompt_BOLD "TOTP:\t${pass}"
 	expireTime=$(getExpire `date +%s`)
 	(( opt_MINIO )) && echo ${expireTime} || prompt_REGU "\t${expireTime} seconds to expire."

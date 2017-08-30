@@ -33,9 +33,11 @@ toHex () {
 	echo -n ${hex}
 }
 
+# $1 = key in hex
+# $2 = time in unix epoch
 genToken () {
 	key=$1
-	(( opt_TEST )) && read -p "timeStamp in seconds: " timeValue || timeValue=`date +%s`
+	(( opt_TEST )) && read -p "timeStamp in seconds: " timeValue || timeValue=$2
 	counter=$(getCounter ${timeValue})
 	# only ask for custom timestamp while testing
 	
