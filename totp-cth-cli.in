@@ -47,7 +47,7 @@ genTokenRoutine () {
 	pass=$(genToken $1 `date +%s`)
 	(( opt_MINIO )) && echo -n ${pass} || prompt_BOLD "TOTP:\t${pass}"
 	expireTime=$(getExpire `date +%s`)
-	(( opt_MINIO )) && echo ${expireTime} || prompt_REGU "\t${expireTime} seconds to expire."
+	(( opt_MINIO )) || prompt_REGU "\t${expireTime} seconds to expire."
 }
 
 initDatabase () {
@@ -84,8 +84,8 @@ showKey () {
 	token=${keyEntry:${#1}+1}
 	# Get the encoded key from the file
 	if [[ "$token" == "" ]]; then
-		prompt_BOLD "Nothing found."
-		exit 0
+		(( opt_MINIO )) || prompt_BOLD "Nothing found."
+		exit 1
 	else
 		hexToken=$(base32ToHex ${token})
 		(( opt_DEBUG )) && echo "[DEBUG]Secret Hex: ${hexToken}"
