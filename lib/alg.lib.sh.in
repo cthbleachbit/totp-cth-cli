@@ -62,4 +62,5 @@ genToken () {
 	
 	echo -n "${totpValue:${#totpValue}-6}"
 	# Print the last 6 numbers
+	rm -f ${storeDir}/time.tmp
 }
