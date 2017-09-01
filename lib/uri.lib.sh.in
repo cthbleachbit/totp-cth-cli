@@ -28,5 +28,5 @@ uri() {
 }
 
 qr() {
-	qrencode -t ANSI "$@"
+	qrencode -t ANSI '$@'
 }
