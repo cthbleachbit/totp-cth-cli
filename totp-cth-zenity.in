@@ -32,9 +32,8 @@ show () {
 	if [[ ${selectedKey} = "" ]]; then
 		return 1
 	else
-		result=$(totp-cth-cli show ${selectedKey} --minio)
-		expireTime=${result:7}
-		show-dialog --info --text="Password for ${selectedKey} is ${result:0:6}.\n${expireTime} second(s) before expiration."
+		result=$(totp-cth-cli show ${selectedKey})
+		show-dialog --info --text="${result}"
 	fi
 }
 
