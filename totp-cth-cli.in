@@ -72,7 +72,7 @@ initDatabase () {
 showKey () {
 	if [ -f ${storeDir}/encrypted.flag ]; then
 		prompt_BOLD "${cli_enc_detected}"
-		aesKeyContent=$(getContentAES)
+		aesKeyContent="$(getContentAES)"
 		[ ${aesKeyContent} ] || exit 1
 		aesHex=$(getHexKEY ${aesKeyContent})
 		ivHex=$(getHexIV ${aesKeyContent})
@@ -90,7 +90,7 @@ showKey () {
 		hexToken=$(base32ToHex ${token})
 		(( opt_DEBUG )) && echo "[DEBUG]Secret Hex: ${hexToken}"
 		# convert the key to hexadecimal value
-		genTokenRoutine ${hexToken}
+		genTokenRoutine "${hexToken}"
 	fi
 	
 	unset keyEntry token hexToken
@@ -126,7 +126,7 @@ delKey () {
 		prompt_BOLD "${cli_enc_detected}"
 		aesKeyContent=$(getContentAES)
 		[ ${aesKeyContent} ] || exit 1
-		aesHex=$(getHexKEY ${aesKeyContent})
+		aesHex="$(getHexKEY ${aesKeyContent})"
 		ivHex=$(getHexIV ${aesKeyContent})
 	fi
 	
@@ -165,7 +165,7 @@ listKey () {
 	keyInMem=$(readKeys "${aesHex}" "${ivHex}")
 	(( opt_MINIO )) || prompt_BOLD "Available Keys:"	
 	for keyEntry in ${keyInMem}; do
-		echo ${keyEntry} | sed -e "s/:.*$//g"
+		echo "${keyEntry}" | sed -e "s/:.*$//g"
 	done
 	
 	unset keyEntry keyInMem
